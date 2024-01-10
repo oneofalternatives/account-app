@@ -8,21 +8,21 @@
     <changeSet id="1" author="jgrjaznovs">
         <createTable tableName="account">
             <column name="id" type="int" autoIncrement="true">
-                <constraints primaryKey="true" nullable="false"/>
+                <constraints primaryKey="true"/>
             </column>
             <column name="client_id" type="int">
                 <constraints nullable="true"/>
             </column>
             <column name="name" type="varchar(50)"/>
             <column name="balance" type="number(19,10)"/>
-            <column name="currency" type="text"/>
+            <column name="currency" type="varchar(3)"/>
         </createTable>
     </changeSet>
 
     <changeSet id="2" author="jgrjaznovs">
         <createTable tableName="transaction">
-            <column name="id" type="int" autoIncrement="true">
-                <constraints primaryKey="true" nullable="false"/>
+            <column name="id" type="int">
+                <constraints primaryKey="true"/>
             </column>
             <column name="sender_account_id" type="int">
                 <constraints foreignKeyName="account.id" validateForeignKey="true"/>
@@ -30,7 +30,7 @@
             <column name="receiver_account_id" type="int">
                 <constraints foreignKeyName="account.id" validateForeignKey="true"/>
             </column>
-            <column name="amount" type="number(19,10)"/>
+            <column name="amount" type="number(16,10)"/>
             <column name="currency" type="text"/>
             <column name="transaction_date" type="timestamp"/>
         </createTable>
