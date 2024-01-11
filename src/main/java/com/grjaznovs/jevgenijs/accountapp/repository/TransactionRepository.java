@@ -8,6 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Integer> {
 
-    @Query("SELECT t FROM Transaction t WHERE t.senderAccount.id = :accountId OR t.receiverAccount.id = :accountId")
+    @Query("SELECT t FROM Transaction t WHERE t.senderAccountId = :accountId OR t.receiverAccountId = :accountId")
     Page<Transaction> findAllBySenderAccountIdOrReceiverAccountId(int accountId, Pageable paginationParameters);
 }

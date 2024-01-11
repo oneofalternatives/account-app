@@ -13,7 +13,7 @@
             <column name="client_id" type="int">
                 <constraints nullable="true"/>
             </column>
-            <column name="name" type="varchar(50)"/>
+            <column name="number" type="varchar(50)"/>
             <column name="balance" type="number(19,10)"/>
             <column name="currency" type="varchar(3)"/>
         </createTable>

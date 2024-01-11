@@ -1,4 +1,4 @@
-client_id,name,balance,currency
+client_id,number,balance,currency
 3,Ethereal Account,724531.8723456789,USD
 2,Quantum Account,134567.4589012345,EUR
 5,Infinite Account,890123.1267890123,GBP

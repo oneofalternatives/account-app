@@ -20,7 +20,7 @@ public class Account {
 
     private int clientId;
 
-    private String name;
+    private String number;
 
     private BigDecimal balance;
 
