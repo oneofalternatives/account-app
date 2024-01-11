@@ -9,4 +9,8 @@
         <loadData file="fake-accounts.csv" tableName="account" relativeToChangelogFile="true"/>
     </changeSet>
 
+    <changeSet id="4" author="jgrjaznovs">
+        <loadData file="fake-transactions.csv" tableName="transaction" relativeToChangelogFile="true"/>
+    </changeSet>
+
 </databaseChangeLog>

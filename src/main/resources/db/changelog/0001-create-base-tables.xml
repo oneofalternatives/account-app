@@ -21,7 +21,7 @@
 
     <changeSet id="2" author="jgrjaznovs">
         <createTable tableName="transaction">
-            <column name="id" type="int">
+            <column name="id" type="int" autoIncrement="true">
                 <constraints primaryKey="true"/>
             </column>
             <column name="sender_account_id" type="int">
@@ -31,7 +31,7 @@
                 <constraints foreignKeyName="account.id" validateForeignKey="true"/>
             </column>
             <column name="amount" type="number(16,10)"/>
-            <column name="currency" type="text"/>
+            <column name="exchange_rate" type="number(16,10)"/>
             <column name="transaction_date" type="timestamp"/>
         </createTable>
     </changeSet>

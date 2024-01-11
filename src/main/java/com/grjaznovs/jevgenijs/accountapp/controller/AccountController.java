@@ -5,7 +5,7 @@ import com.grjaznovs.jevgenijs.accountapp.repository.AccountRepository;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(value = "/account")
+@RequestMapping("/account")
 public class AccountController {
 
     private final AccountRepository accountRepository;
