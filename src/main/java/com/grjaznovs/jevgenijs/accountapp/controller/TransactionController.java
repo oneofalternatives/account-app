@@ -2,10 +2,15 @@ package com.grjaznovs.jevgenijs.accountapp.controller;
 
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
-import com.grjaznovs.jevgenijs.accountapp.repository.TransactionRepository;
 import com.grjaznovs.jevgenijs.accountapp.service.TransactionService;
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @RestController
 public class TransactionController {
@@ -13,7 +18,6 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     public TransactionController(
-        TransactionRepository transactionRepository,
         TransactionService transactionService
     ) {
         this.transactionService = transactionService;
@@ -33,16 +37,16 @@ public class TransactionController {
         @RequestParam int offset,
         @RequestParam int limit
     ) {
-        return
-            transactionService.getTransactionHistoryByAccountId(accountId, offset, limit);
+        return transactionService.getTransactionHistoryByAccountId(accountId, offset, limit);
     }
 
     @PostMapping(path = "/transaction/fund-transfer")
     public Transaction transferFunds(
         int senderAccountId,
         int receiverAccountId,
-        int amount
+        BigDecimal amount,
+        LocalDateTime transactionDate
     ) {
-        return transactionService.transferFunds(senderAccountId, receiverAccountId, amount);
+        return transactionService.transferFunds(senderAccountId, receiverAccountId, amount, transactionDate);
     }
 }

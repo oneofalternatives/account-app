@@ -9,3 +9,7 @@ client_id,number,balance,currency
 1,Lunar Account,1000000.0009876543,CNY
 2,Stellar Account,50000000.0012345678,BRL
 5,Chrono Account,100000000.0123456789,MXN
+6,Dollar Account,1000.00,USD
+6,Euro Account,1000.00,EUR
+6,Australian Account,1000.00,AUD
+6,Pound Account,1000.00,GBP

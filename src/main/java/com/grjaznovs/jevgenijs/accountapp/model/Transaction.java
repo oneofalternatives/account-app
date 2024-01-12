@@ -21,10 +21,10 @@ public class Transaction {
     private int receiverAccountId;
 
     @Column(precision = 16, scale = 10)
-    private BigDecimal amount;
+    private BigDecimal sourceAmount;
 
     @Column(precision = 16, scale = 10)
-    private BigDecimal exchangeRate;
+    private BigDecimal targetAmount;
 
     private LocalDateTime transactionDate;
 }

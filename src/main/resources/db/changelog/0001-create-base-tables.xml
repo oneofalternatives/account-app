@@ -30,8 +30,8 @@
             <column name="receiver_account_id" type="int">
                 <constraints foreignKeyName="account.id" validateForeignKey="true"/>
             </column>
-            <column name="amount" type="number(16,10)"/>
-            <column name="exchange_rate" type="number(16,10)"/>
+            <column name="source_amount" type="number(16,10)"/>
+            <column name="target_amount" type="number(16,10)"/>
             <column name="transaction_date" type="timestamp"/>
         </createTable>
     </changeSet>
