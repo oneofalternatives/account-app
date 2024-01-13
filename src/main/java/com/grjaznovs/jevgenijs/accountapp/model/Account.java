@@ -18,7 +18,7 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private int clientId;
+    private Integer clientId;
 
     private String number;
 

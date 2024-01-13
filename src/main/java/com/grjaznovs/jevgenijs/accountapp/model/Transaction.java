@@ -14,11 +14,11 @@ public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
 
-    private int senderAccountId;
+    private Integer senderAccountId;
 
-    private int receiverAccountId;
+    private Integer receiverAccountId;
 
     @Column(precision = 16, scale = 10)
     private BigDecimal sourceAmount;

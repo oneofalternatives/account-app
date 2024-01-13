@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record TransactionHistoryRecordProjection(
-    int transactionId,
-    AccountBaseInfoProjection account,
+    Integer transactionId,
+    AccountBaseInfoProjection peerAccount,
     Direction direction,
     BigDecimal amount,
     String currency,
@@ -13,10 +13,9 @@ public record TransactionHistoryRecordProjection(
 ) {
 
     public record AccountBaseInfoProjection(
-        int id,
+        Integer id,
         String number
-    ) {
-    }
+    ) { }
 
     public enum Direction {OUTBOUND, INBOUND}
 }

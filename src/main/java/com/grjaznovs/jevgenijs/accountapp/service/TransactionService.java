@@ -1,6 +1,8 @@
 package com.grjaznovs.jevgenijs.accountapp.service;
 
+import com.grjaznovs.jevgenijs.accountapp.api.AccountNotFoundException;
 import com.grjaznovs.jevgenijs.accountapp.api.FundTransferException;
+import com.grjaznovs.jevgenijs.accountapp.api.PageProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
 import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConversionClient;
@@ -12,13 +14,13 @@ import com.grjaznovs.jevgenijs.accountapp.repository.TransactionRepository;
 import com.grjaznovs.jevgenijs.accountapp.settings.MoneySettings;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -62,7 +64,7 @@ public class TransactionService {
                 );
     }
 
-    public Page<TransactionHistoryRecordProjection> getTransactionHistoryByAccountId(
+    public PageProjection<TransactionHistoryRecordProjection> getTransactionHistoryByAccountId(
         int accountId,
         int offset,
         int limit
@@ -132,28 +134,37 @@ public class TransactionService {
             })
             .toList();
 
-        return new PageImpl<>(
-            transactionProjections,
-            transactionsPage.getPageable(),
-            transactionsPage.getTotalElements()
-        );
+        return
+            new PageProjection<>(
+                transactionProjections,
+                transactionsPage.getPageable().getOffset(),
+                transactionsPage.getSize(),
+                transactionsPage.getNumber(),
+                transactionsPage.getTotalPages(),
+                transactionsPage.getNumberOfElements(),
+                transactionsPage.getTotalElements(),
+                transactionsPage.isFirst(),
+                transactionsPage.isLast()
+            );
     }
 
     @Transactional
     public Transaction transferFunds(
-        int senderAccountId,
-        int receiverAccountId,
+        Integer senderAccountId,
+        Integer receiverAccountId,
         BigDecimal amount,
         LocalDateTime transactionDate
     ) {
         verifyAmountScale(amount);
-        verifyThatAreDifferentAccounts(senderAccountId, receiverAccountId);
+        verifyAccountIds(senderAccountId, receiverAccountId);
 
         var accountsById =
             accountRepository
                 .findAllById(Set.of(senderAccountId, receiverAccountId))
                 .stream()
                 .collect(toMap(Account::getId, Function.identity()));
+
+        verifyAccountsArePresent(Set.of(senderAccountId, receiverAccountId), accountsById);
 
         var senderAccount = accountsById.get(senderAccountId);
         var receiverAccount = accountsById.get(receiverAccountId);
@@ -188,9 +199,34 @@ public class TransactionService {
         }
     }
 
-    private void verifyThatAreDifferentAccounts(int senderAccountId, int receiverAccountId) {
-        if (senderAccountId == receiverAccountId) {
+    private void verifyAccountIds(Integer senderAccountId, Integer receiverAccountId) {
+        if (senderAccountId == null || receiverAccountId == null) {
+            throw new FundTransferException("Both sender and receiver accounts IDs must be passed");
+        }
+
+        if (senderAccountId.equals(receiverAccountId)) {
             throw new FundTransferException("Sender account and receiver account are the same");
+        }
+    }
+
+    private void verifyAccountsArePresent(
+        Set<Integer> requestedAccountIds,
+        Map<Integer, Account> accounts
+    ) {
+        var nonExistingAccountIds =
+            requestedAccountIds
+                .stream()
+                .filter(not(accounts.keySet()::contains))
+                .map(String::valueOf)
+                .collect(Collectors.toSet());
+
+        if (isNotEmpty(nonExistingAccountIds)) {
+            throw new AccountNotFoundException(
+                String.format(
+                    "Accounts with these IDs do not exist: [%s]",
+                    String.join(", ", nonExistingAccountIds)
+                )
+            );
         }
     }
 

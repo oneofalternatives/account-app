@@ -1,5 +1,6 @@
 package com.grjaznovs.jevgenijs.accountapp.controller;
 
+import com.grjaznovs.jevgenijs.accountapp.api.PageProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
 import com.grjaznovs.jevgenijs.accountapp.service.TransactionService;
@@ -32,7 +33,7 @@ public class TransactionController {
     }
 
     @GetMapping(path = "/transaction/history")
-    public Page<TransactionHistoryRecordProjection> findTransactionsByAccountId(
+    public PageProjection<TransactionHistoryRecordProjection> findTransactionsByAccountId(
         @RequestParam Integer accountId,
         @RequestParam int offset,
         @RequestParam int limit
