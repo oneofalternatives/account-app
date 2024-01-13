@@ -1,6 +1,5 @@
 package com.grjaznovs.jevgenijs.accountapp.service;
 
-import com.grjaznovs.jevgenijs.accountapp.api.AccountNotFoundException;
 import com.grjaznovs.jevgenijs.accountapp.api.FundTransferException;
 import com.grjaznovs.jevgenijs.accountapp.api.PageProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
@@ -221,7 +220,7 @@ public class TransactionService {
                 .collect(Collectors.toSet());
 
         if (isNotEmpty(nonExistingAccountIds)) {
-            throw new AccountNotFoundException(
+            throw new FundTransferException(
                 String.format(
                     "Accounts with these IDs do not exist: [%s]",
                     String.join(", ", nonExistingAccountIds)

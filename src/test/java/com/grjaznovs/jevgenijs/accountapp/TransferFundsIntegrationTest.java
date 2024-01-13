@@ -5,11 +5,9 @@ import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
 import com.grjaznovs.jevgenijs.accountapp.repository.AccountRepository;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.api.SoftAssertions;
 import org.assertj.core.api.ThrowingConsumer;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,7 +67,7 @@ class TransferFundsIntegrationTest {
             getMaxAccountId()
                 + 1;
 
-        var transactionHistoryPage = assertOk(restGetTransactionHistoryForAccountId(nonExistingAccountId, Paging.of(0, 10)));
+        var transactionHistoryPage = restGetTransactionHistoryForAccountId(nonExistingAccountId, Paging.of(0, 10));
 
         assertThat(transactionHistoryPage.content())
             .isEmpty();
@@ -81,21 +79,29 @@ class TransferFundsIntegrationTest {
 
         accountRepository.saveAndFlush(account);
 
-        var transactionHistoryPage = assertOk(restGetTransactionHistoryForAccountId(account.getId(), Paging.of(0, 10)));
+        var transactionHistoryPage = restGetTransactionHistoryForAccountId(account.getId(), Paging.of(0, 10));
 
         assertThat(transactionHistoryPage.content())
             .isEmpty();
     }
 
-    // TODO implement when error handling is implemented
-    @Disabled
     @Test
     void shouldNotRegisterFundTransferWhenAccountDoesNotExit() {
         var maxAccountId = (int) getMaxAccountId();
 
-        var responseEntity = restPostFundTransfer(maxAccountId + 1, maxAccountId + 2, 30.00, "2023-11-01T17:40");
+        var senderAccountId = maxAccountId + 1;
+        var receiverAccountId = maxAccountId + 2;
+        var responseEntity = restPostFundTransferFail(senderAccountId, receiverAccountId, 30.00, "2023-11-01T17:40");
 
-        throw new NotImplementedException("Test not implemented");
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(responseEntity.getBody())
+            .isEqualTo(
+                String.format(
+                    "Accounts with these IDs do not exist: [%s]",
+                    String.join(", ", String.valueOf(senderAccountId), String.valueOf(receiverAccountId)
+                    )
+                )
+            );
     }
 
     @Test
@@ -106,19 +112,19 @@ class TransferFundsIntegrationTest {
 
         accountRepository.saveAllAndFlush(Set.of(eurAccount, usdAccount, audAccount));
 
-        var eurUsdTransaction = assertOk(restPostFundTransfer(eurAccount.getId(), usdAccount.getId(), 30.00, "2023-11-01T17:40"));
-        var usdEurTransaction = assertOk(restPostFundTransfer(usdAccount.getId(), eurAccount.getId(), 50.00, "2023-11-01T20:50"));
-        var usdAudTransaction = assertOk(restPostFundTransfer(usdAccount.getId(), audAccount.getId(), 99.00, "2023-11-02T22:30"));
+        var eurUsdTransaction =
+            restPostFundTransferSuccess(eurAccount.getId(), usdAccount.getId(), 30.00, "2023-11-01T17:40");
+        var usdEurTransaction =
+            restPostFundTransferSuccess(usdAccount.getId(), eurAccount.getId(), 50.00, "2023-11-01T20:50");
+        var usdAudTransaction =
+            restPostFundTransferSuccess(usdAccount.getId(), audAccount.getId(), 99.00, "2023-11-02T22:30");
 
         assertThat(Set.of(eurUsdTransaction, usdEurTransaction, usdAudTransaction))
             .allSatisfy(tx -> assertThat(tx.getId()).isNotNull());
 
-        var eurAccountTransactionHistoryPage =
-            assertOk(restGetTransactionHistoryForAccountId(eurAccount.getId(), Paging.of(0, 10)));
-        var usdAccountTransactionHistoryPage =
-            assertOk(restGetTransactionHistoryForAccountId(usdAccount.getId(), Paging.of(0, 10)));
-        var audAccountTransactionHistoryPage =
-            assertOk(restGetTransactionHistoryForAccountId(audAccount.getId(), Paging.of(0, 10)));
+        var eurAccountTransactionHistoryPage = restGetTransactionHistoryForAccountId(eurAccount.getId(), Paging.of(0, 10));
+        var usdAccountTransactionHistoryPage = restGetTransactionHistoryForAccountId(usdAccount.getId(), Paging.of(0, 10));
+        var audAccountTransactionHistoryPage = restGetTransactionHistoryForAccountId(audAccount.getId(), Paging.of(0, 10));
 
         // @formatter:off
         assertThat(eurAccountTransactionHistoryPage.content())
@@ -181,13 +187,13 @@ class TransferFundsIntegrationTest {
         assertThat(audAccountTransactionHistoryPage.content())
             .satisfiesExactly(
                 requirements(
-                    require(    "transactionId",        usdAudTransaction.getId()               ),
+                    require(    "transactionId",        usdAudTransaction.getId()                  ),
                     require(    "direction",            INBOUND                                 ),
                     require(    "peerAccount.id",       usdAccount.getId()                      ),
                     require(    "peerAccount.number",   usdAccount.getNumber()                  ),
                     require(    "amount",               99.00                                   ),
                     require(    "currency",             audAccount.getCurrency()                ),
-                    require(    "transactionDate",      usdAudTransaction.getTransactionDate()  )
+                    require(    "transactionDate",      usdAudTransaction.getTransactionDate()     )
                 )
             );
         // @formatter:on
@@ -202,7 +208,7 @@ class TransferFundsIntegrationTest {
             .orElse(0);
     }
 
-    private ResponseEntity<PageProjection<TransactionHistoryRecordProjection>> restGetTransactionHistoryForAccountId(
+    private PageProjection<TransactionHistoryRecordProjection> restGetTransactionHistoryForAccountId(
         int accountId,
         Paging paging
     ) {
@@ -214,14 +220,49 @@ class TransferFundsIntegrationTest {
                 .queryParam("limit", paging.limit())
                 .build();
 
-        return testRestTemplate.exchange(url, GET, null, new ParameterizedTypeReference<>() { });
+        return assertOkAndGetBody(testRestTemplate.exchange(url, GET, null, new ParameterizedTypeReference<>() { }));
     }
 
-    private ResponseEntity<Transaction> restPostFundTransfer(
+    private Transaction restPostFundTransferSuccess(
         int senderAccountId,
         int receiverAccountId,
         double amount,
         String transactionDate
+    ) {
+        var responseEntity =
+            restPostFundTransfer(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                transactionDate,
+                Transaction.class
+            );
+
+        return assertOkAndGetBody(responseEntity);
+    }
+
+    private ResponseEntity<String> restPostFundTransferFail(
+        int senderAccountId,
+        int receiverAccountId,
+        double amount,
+        String transactionDate
+    ) {
+        return
+            restPostFundTransfer(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                transactionDate,
+                String.class
+            );
+    }
+
+    private <T> ResponseEntity<T> restPostFundTransfer(
+        int senderAccountId,
+        int receiverAccountId,
+        double amount,
+        String transactionDate,
+        Class<T> responseBodyType
     ) {
         var url =
             URI_BUILDER_FACTORY
@@ -232,10 +273,12 @@ class TransferFundsIntegrationTest {
                 .queryParam("transactionDate", LocalDateTime.parse(transactionDate))
                 .build();
 
-        return testRestTemplate.exchange(url, POST, null, Transaction.class);
+        return testRestTemplate.exchange(url, POST, null, responseBodyType);
     }
 
-    private static <T> T assertOk(ResponseEntity<T> responseEntity) {
+    private <T> T assertOkAndGetBody(
+        ResponseEntity<T> responseEntity
+    ) {
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         var body = responseEntity.getBody();
