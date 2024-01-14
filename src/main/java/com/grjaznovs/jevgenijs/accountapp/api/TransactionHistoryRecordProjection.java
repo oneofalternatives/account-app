@@ -2,6 +2,7 @@ package com.grjaznovs.jevgenijs.accountapp.api;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Currency;
 import java.util.function.Consumer;
 
 public record TransactionHistoryRecordProjection(
@@ -9,7 +10,7 @@ public record TransactionHistoryRecordProjection(
     AccountBaseInfoProjection peerAccount,
     Direction direction,
     BigDecimal amount,
-    String currency,
+    Currency currency,
     LocalDateTime transactionDate
 ) {
 
@@ -29,7 +30,7 @@ public record TransactionHistoryRecordProjection(
         public AccountBaseInfoProjection peerAccount;
         public Direction direction;
         public BigDecimal amount;
-        public String currency;
+        public Currency currency;
         public LocalDateTime transactionDate;
 
         public Builder() { }

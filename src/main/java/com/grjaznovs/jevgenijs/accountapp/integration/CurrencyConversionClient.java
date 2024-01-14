@@ -4,12 +4,13 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Currency;
 import java.util.Set;
 
 @Repository
 public interface CurrencyConversionClient {
 
-    Set<String> getSupportedCurrencies();
+    Set<Currency> getSupportedCurrencies();
 
-    BigDecimal convert(BigDecimal amount, String sourceCurrency, String targetCurrency, LocalDate date);
+    BigDecimal convert(BigDecimal amount, Currency sourceCurrency, Currency targetCurrency, LocalDate date);
 }

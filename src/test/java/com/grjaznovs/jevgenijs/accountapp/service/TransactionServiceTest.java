@@ -35,6 +35,7 @@ import java.util.stream.StreamSupport;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.INBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.OUTBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.accountWith;
+import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.*;
 import static com.grjaznovs.jevgenijs.accountapp.util.MoneyConstants.SCALE;
 import static com.grjaznovs.jevgenijs.accountapp.util.TransactionTestFactory.transactionWith;
 import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
@@ -81,9 +82,9 @@ class TransactionServiceTest {
             .thenAnswer((Answer<List<Account>>) invocationOnMock -> {
                 var accounts =
                     List.of(
-                        accountWith(1, 1, "ACC-0001", 100.00, "EUR"),
-                        accountWith(2, 1, "ACC-0002", 090.00, "USD"),
-                        accountWith(3, 2, "ACC-0003", 080.00, "AUD")
+                        accountWith(1, 1, "ACC-0001", 100.00, EUR),
+                        accountWith(2, 1, "ACC-0002", 090.00, USD),
+                        accountWith(3, 2, "ACC-0003", 080.00, AUD)
                     );
 
                 //noinspection unchecked
@@ -112,7 +113,7 @@ class TransactionServiceTest {
                                             $$.number = "ACC-0002";
                                         });
                     $.amount =          scaledBigDecimal(25.00);
-                    $.currency =        "EUR";
+                    $.currency =        EUR;
                     $.transactionDate = LocalDateTime.parse("2023-11-11T11:11");
                 }),
                 TransactionHistoryRecordProjection.buildWith($ -> {
@@ -123,7 +124,7 @@ class TransactionServiceTest {
                                             $$.number = "ACC-0002";
                                         });
                     $.amount =          scaledBigDecimal(88.00);
-                    $.currency =        "EUR";
+                    $.currency =        EUR;
                     $.transactionDate = LocalDateTime.parse("2023-10-10T10:10");
                 }),
                 TransactionHistoryRecordProjection.buildWith($ -> {
@@ -134,7 +135,7 @@ class TransactionServiceTest {
                                             $$.number = "ACC-0003";
                                         });
                     $.amount =          scaledBigDecimal(20.00);
-                    $.currency =        "EUR";
+                    $.currency =        EUR;
                     $.transactionDate = LocalDateTime.parse("2023-09-09T09:09");
                 })
             );
@@ -226,7 +227,7 @@ class TransactionServiceTest {
             .thenReturn(accounts);
 
         when(currencyConversionClient.getSupportedCurrencies())
-            .thenReturn(Set.of("EUR", "USD", "AUD"));
+            .thenReturn(Set.of(EUR, USD, AUD));
 
         var exception = catchThrowable(() ->
             transactionService.transferFunds(
@@ -246,11 +247,11 @@ class TransactionServiceTest {
         return
             Stream.of(
                 arguments(
-                    List.of(accountWith(1, "GBP"), accountWith(2, "GEL")),
+                    List.of(accountWith(1, GBP), accountWith(2, GEL)),
                     "Conversion from/to any of these currencies is not supported: [GBP, GEL]"
                 ),
                 arguments(
-                    List.of(accountWith(1, "AUD"), accountWith(2, "GEL")),
+                    List.of(accountWith(1, AUD), accountWith(2, GEL)),
                     "Conversion from/to any of these currencies is not supported: [GEL]"
                 )
             );
@@ -266,14 +267,14 @@ class TransactionServiceTest {
         when(accountRepository.findAllById(any()))
             .thenReturn(
                 List.of(
-                    accountWith(1, 10, "ACC-0001", 100.00, "EUR"),
-                    accountWith(2, 11, "ACC-0002", 100.00, "USD")
+                    accountWith(1, 10, "ACC-0001", 100.00, EUR),
+                    accountWith(2, 11, "ACC-0002", 100.00, USD)
                 )
             );
 
         when(currencyConversionClient.getSupportedCurrencies())
-            .thenReturn(Set.of("EUR", "USD", "AUD"));
-        when(currencyConversionClient.convert(BigDecimal.valueOf(30.00), "USD", "EUR", LocalDate.parse("2023-11-11")))
+            .thenReturn(Set.of(EUR, USD, AUD));
+        when(currencyConversionClient.convert(BigDecimal.valueOf(30.00), USD, EUR, LocalDate.parse("2023-11-11")))
             .thenReturn(BigDecimal.valueOf(60.00));
 
         when(transactionRepository.saveAndFlush(any()))

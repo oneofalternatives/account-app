@@ -2,6 +2,8 @@ package com.grjaznovs.jevgenijs.accountapp.util;
 
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 
+import java.util.Currency;
+
 import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 
 public class AccountTestFactory {
@@ -11,7 +13,7 @@ public class AccountTestFactory {
         int clientId,
         String accountNumber,
         double balance,
-        String currency
+        Currency currency
     ) {
         var account = new Account();
         account.setId(accountId);
@@ -26,7 +28,7 @@ public class AccountTestFactory {
         int clientId,
         String accountNumber,
         double balance,
-        String currency
+        Currency currency
     ) {
         var account = new Account();
         account.setClientId(clientId);
@@ -38,7 +40,7 @@ public class AccountTestFactory {
 
     public static Account accountWith(
         int accountId,
-        String currency
+        Currency currency
     ) {
         var account = new Account();
         account.setId(accountId);

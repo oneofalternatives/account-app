@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.accountWith;
+import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpMethod.GET;
@@ -60,9 +61,9 @@ class FetchAccountsIntegrationTest {
 
     @Test
     void shouldReturnAccountsByClientId() {
-        var eurAccount = accountWith(1, "ACC-0001", 1000.00, "EUR");
-        var usdAccount = accountWith(2, "ACC-0002", 0900.00, "USD");
-        var audAccount = accountWith(2, "ACC-0003", 0800.00, "AUD");
+        var eurAccount = accountWith(1, "ACC-0001", 1000.00, EUR);
+        var usdAccount = accountWith(2, "ACC-0002", 0900.00, USD);
+        var audAccount = accountWith(2, "ACC-0003", 0800.00, AUD);
 
         accountRepository.saveAllAndFlush(Set.of(eurAccount, usdAccount, audAccount));
 

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 @Setter
 @Getter
@@ -24,5 +25,5 @@ public class Account {
 
     private BigDecimal balance;
 
-    private String currency;
+    private Currency currency;
 }

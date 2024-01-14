@@ -29,6 +29,7 @@ import java.util.Set;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.INBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.OUTBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.accountWith;
+import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.*;
 import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
@@ -71,7 +72,7 @@ class TransferFundsIntegrationTest {
 
     @Test
     void shouldReturnEmptyTransactionHistoryWhenAccountHasNoTransactions() {
-        var account = accountWith(1, "ACC-0001", 1000.00, "EUR");
+        var account = accountWith(1, "ACC-0001", 1000.00, EUR);
 
         accountRepository.saveAndFlush(account);
 
@@ -95,9 +96,9 @@ class TransferFundsIntegrationTest {
 
     @Test
     void shouldRegisterFundTransfer() {
-        var eurAccount = accountWith(2, "ACC-0001", 1000.00, "EUR");
-        var usdAccount = accountWith(3, "ACC-0002", 1000.00, "USD");
-        var audAccount = accountWith(3, "ACC-0003", 1000.00, "AUD");
+        var eurAccount = accountWith(2, "ACC-0001", 1000.00, EUR);
+        var usdAccount = accountWith(3, "ACC-0002", 1000.00, USD);
+        var audAccount = accountWith(3, "ACC-0003", 1000.00, AUD);
 
         accountRepository.saveAllAndFlush(Set.of(eurAccount, usdAccount, audAccount));
 

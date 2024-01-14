@@ -199,12 +199,13 @@ public class TransactionService {
         }
     }
 
-    private void verifyThatCurrenciesAreSupported(String... currencies) {
+    private void verifyThatCurrenciesAreSupported(Currency... currencies) {
         var supportedCurrencies = currencyConversionClient.getSupportedCurrencies();
 
         var unsupportedCurrencies =
             Arrays.stream(currencies)
                 .filter(not(supportedCurrencies::contains))
+                .map(Currency::getCurrencyCode)
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -253,7 +254,8 @@ public class TransactionService {
         TransactionHistoryRecordProjection.Direction direction,
         Account account,
         BigDecimal amount,
-        String currency) { }
+        Currency currency
+    ) { }
 }
 
 

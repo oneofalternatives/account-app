@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Currency;
 import java.util.Set;
 
 @Repository
@@ -17,21 +18,21 @@ public class CurrencyConversionClientMock implements CurrencyConversionClient {
     }
 
     @Override
-    public Set<String> getSupportedCurrencies() {
+    public Set<Currency> getSupportedCurrencies() {
         return settings.supportedCurrencies();
     }
 
     @Override
     public BigDecimal convert(
         BigDecimal amount,
-        String sourceCurrency,
-        String targetCurrency,
+        Currency sourceCurrency,
+        Currency targetCurrency,
         LocalDate date
     ) {
         return
             settings
                 .exchangeRates()
-                .get(sourceCurrency + targetCurrency)
+                .get(sourceCurrency.getCurrencyCode() + targetCurrency.getCurrencyCode())
                 .multiply(amount);
     }
 }
