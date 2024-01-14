@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 import static com.grjaznovs.jevgenijs.accountapp.AccountTestFactory.accountWith;
@@ -75,7 +76,7 @@ class TransferFundsIntegrationTest {
 
     @Test
     void shouldReturnEmptyTransactionHistoryWhenAccountHasNoTransactions() {
-        var account = accountWith(2, "ACC-0001", 1000.00, "EUR");
+        var account = accountWith(1, "ACC-0001", 1000.00, "EUR");
 
         accountRepository.saveAndFlush(account);
 
@@ -106,9 +107,9 @@ class TransferFundsIntegrationTest {
 
     @Test
     void shouldRegisterFundTransfer() {
-        var eurAccount = accountWith(3, "ACC-0001", 1000.00, "EUR");
-        var usdAccount = accountWith(4, "ACC-0002", 0900.00, "USD");
-        var audAccount = accountWith(4, "ACC-0003", 0800.00, "AUD");
+        var eurAccount = accountWith(2, "ACC-0001", 1000.00, "EUR");
+        var usdAccount = accountWith(3, "ACC-0002", 1000.00, "USD");
+        var audAccount = accountWith(3, "ACC-0003", 1000.00, "AUD");
 
         accountRepository.saveAllAndFlush(Set.of(eurAccount, usdAccount, audAccount));
 
@@ -197,6 +198,18 @@ class TransferFundsIntegrationTest {
                 )
             );
         // @formatter:on
+
+        var accountsForClientId2 = restGetAccountsForClientId(2);
+        var accountsForClientId3 = restGetAccountsForClientId(3);
+
+        assertThat(accountsForClientId2)
+            .satisfiesExactly(accountMustHaveBalanceEqualTo(eurAccount.getId(), 1016.9901573870));
+
+        assertThat(accountsForClientId3)
+            .satisfiesExactlyInAnyOrder(
+                accountMustHaveBalanceEqualTo(usdAccount.getId(), 920.2996614200),
+                accountMustHaveBalanceEqualTo(audAccount.getId(), 1099.00)
+            );
     }
 
     private Integer getMaxAccountId() {
@@ -276,6 +289,25 @@ class TransferFundsIntegrationTest {
         return testRestTemplate.exchange(url, POST, null, responseBodyType);
     }
 
+    private List<Account> restGetAccountsForClientId(int clientId) {
+        var url =
+            URI_BUILDER_FACTORY
+                .uriString("/account")
+                .queryParam("clientId", clientId)
+                .build();
+
+        var responseEntity =
+            testRestTemplate
+                .exchange(
+                    url,
+                    GET,
+                    null,
+                    new ParameterizedTypeReference<List<Account>>() { }
+                );
+
+        return assertOkAndGetBody(responseEntity);
+    }
+
     private <T> T assertOkAndGetBody(
         ResponseEntity<T> responseEntity
     ) {
@@ -287,17 +319,29 @@ class TransferFundsIntegrationTest {
         return body;
     }
 
-    private record Paging(int offset, int limit) {
+    private static ThrowingConsumer<Account> accountMustHaveBalanceEqualTo(
+        Integer id,
+        double expectedBalance
+    ) {
+        return acc ->
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(acc.getId())
+                    .as("account ID")
+                    .isEqualTo(id);
 
-        public static Paging of(int offset, int limit) {
-            return new Paging(offset, limit);
-        }
-
+                softly.assertThat(acc.getBalance())
+                    .as("account balance")
+                    .isEqualTo(
+                        BigDecimal.valueOf(expectedBalance)
+                            .setScale(10, RoundingMode.HALF_UP)
+                    );
+            });
     }
 
     protected static class TransactionProjectionRequirementVerifier {
 
         public static final String TRANSACTION_ID = "transactionId";
+
         public static final String DIRECTION = "direction";
         public static final String PEER_ACCOUNT_ID = "peerAccount.id";
         public static final String PEER_ACCOUNT_NUMBER = "peerAccount.number";
@@ -331,6 +375,14 @@ class TransferFundsIntegrationTest {
 
         public static Pair<String, Object> require(String key, Object expectedValue) {
             return Pair.of(key, expectedValue);
+        }
+
+    }
+
+    private record Paging(int offset, int limit) {
+
+        public static Paging of(int offset, int limit) {
+            return new Paging(offset, limit);
         }
     }
 }
