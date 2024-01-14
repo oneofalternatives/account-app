@@ -12,5 +12,5 @@ public interface CurrencyConversionClient {
 
     Set<Currency> getSupportedCurrencies();
 
-    BigDecimal convert(BigDecimal amount, Currency sourceCurrency, Currency targetCurrency, LocalDate date);
+    BigDecimal getDirectRate(Currency fromCurrency, Currency toCurrency, LocalDate date);
 }

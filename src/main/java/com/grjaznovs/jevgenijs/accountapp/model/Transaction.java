@@ -1,14 +1,18 @@
 package com.grjaznovs.jevgenijs.accountapp.model;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Getter
 @Setter
+@Getter
+@EqualsAndHashCode
+@ToString
 @Entity
 public class Transaction {
 

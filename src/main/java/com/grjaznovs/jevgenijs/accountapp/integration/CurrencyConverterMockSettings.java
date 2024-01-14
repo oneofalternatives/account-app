@@ -1,4 +1,4 @@
-package com.grjaznovs.jevgenijs.accountapp.settings;
+package com.grjaznovs.jevgenijs.accountapp.integration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -11,5 +11,4 @@ import java.util.Set;
 public record CurrencyConverterMockSettings(
     Set<Currency> supportedCurrencies,
     Map<String, BigDecimal> exchangeRates
-) {
-}
+) { }

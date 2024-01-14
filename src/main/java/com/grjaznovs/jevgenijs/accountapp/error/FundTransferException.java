@@ -1,4 +1,4 @@
-package com.grjaznovs.jevgenijs.accountapp.api;
+package com.grjaznovs.jevgenijs.accountapp.error;
 
 public class FundTransferException extends RuntimeException {
 

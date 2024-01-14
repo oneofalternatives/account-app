@@ -53,4 +53,14 @@ public class AccountTestFactory {
         account.setId(accountId);
         return account;
     }
+
+    public static Account copy(Account account) {
+        var copy = new Account();
+        copy.setId(account.getId());
+        copy.setClientId(account.getClientId());
+        copy.setNumber(account.getNumber());
+        copy.setBalance(account.getBalance());
+        copy.setCurrency(account.getCurrency());
+        return copy;
+    }
 }

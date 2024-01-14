@@ -1,6 +1,6 @@
 package com.grjaznovs.jevgenijs.accountapp.controller;
 
-import com.grjaznovs.jevgenijs.accountapp.api.FundTransferException;
+import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

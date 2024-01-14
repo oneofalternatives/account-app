@@ -1,6 +1,6 @@
 package com.grjaznovs.jevgenijs.accountapp.service;
 
-import com.grjaznovs.jevgenijs.accountapp.api.FundTransferException;
+import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
 import com.grjaznovs.jevgenijs.accountapp.api.PageProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
@@ -146,10 +146,8 @@ public class TransactionService {
 
         verifyThatCurrenciesAreSupported(sourceCurrency, targetCurrency);
 
-        var sourceAmount =
-            currencyConversionClient
-                .convert(amount, targetCurrency, sourceCurrency, transactionDate.toLocalDate())
-                .setScale(moneySettings.scale(), moneySettings.roundingMode());
+        var directRate = currencyConversionClient.getDirectRate(sourceCurrency, targetCurrency, transactionDate.toLocalDate());
+        var sourceAmount = amount.divide(directRate, moneySettings.scale(), moneySettings.roundingMode());
 
         var transaction = new Transaction();
         transaction.setSenderAccountId(senderAccountId);
@@ -161,9 +159,8 @@ public class TransactionService {
         senderAccount.setBalance(senderAccount.getBalance().subtract(sourceAmount));
         receiverAccount.setBalance(receiverAccount.getBalance().add(amount));
 
-        // TODO is "flush" needed here?
-        accountRepository.saveAllAndFlush(Set.of(senderAccount, receiverAccount));
-        return transactionRepository.saveAndFlush(transaction);
+        accountRepository.saveAll(Set.of(senderAccount, receiverAccount));
+        return transactionRepository.save(transaction);
     }
 
     private void verifyAmountScale(BigDecimal amount) {
@@ -257,7 +254,3 @@ public class TransactionService {
         Currency currency
     ) { }
 }
-
-
-
-

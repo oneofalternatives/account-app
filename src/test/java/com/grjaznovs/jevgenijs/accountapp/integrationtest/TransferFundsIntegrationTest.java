@@ -5,8 +5,6 @@ import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
 import com.grjaznovs.jevgenijs.accountapp.repository.AccountRepository;
-import org.assertj.core.api.SoftAssertions;
-import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,14 +30,15 @@ import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.account
 import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.*;
 import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
+// TODO Find out why @ActiveProfiles(profiles = {"common"}) didn't work
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @AutoConfigureMockMvc
-// TODO Find out why @ActiveProfiles(profiles = {"common"}) didn't work
 @TestPropertySource(locations = "classpath:application-integrationtest.properties")
 class TransferFundsIntegrationTest {
 
@@ -137,7 +136,7 @@ class TransferFundsIntegrationTest {
                                             $$.id       = usdAccount.getId();
                                             $$.number   = usdAccount.getNumber();
                                         });
-                    $.amount            = scaledBigDecimal(33.0098426130);
+                    $.amount            = scaledBigDecimal(33.0760749724);
                     $.currency          = eurAccount.getCurrency();
                     $.transactionDate   = eurUsdTransaction.getTransactionDate();
                 })
@@ -154,7 +153,7 @@ class TransferFundsIntegrationTest {
                                             $$.id       = audAccount.getId();
                                             $$.number   = audAccount.getNumber();
                                         });
-                    $.amount            = scaledBigDecimal(64.35033858);
+                    $.amount            = scaledBigDecimal(66.00);
                     $.currency          = usdAccount.getCurrency();
                     $.transactionDate   = usdAudTransaction.getTransactionDate();
                 }),
@@ -165,7 +164,7 @@ class TransferFundsIntegrationTest {
                                             $$.id       = eurAccount.getId();
                                             $$.number   = eurAccount.getNumber();
                                         });
-                    $.amount            = scaledBigDecimal(45.35);
+                    $.amount            = scaledBigDecimal(45.4409921788);
                     $.currency          = usdAccount.getCurrency();
                     $.transactionDate   = usdEurTransaction.getTransactionDate();
                 }),
@@ -204,12 +203,14 @@ class TransferFundsIntegrationTest {
         var accountsForClientId3 = restGetAccountsForClientId(3);
 
         assertThat(accountsForClientId2)
-            .satisfiesExactly(accountMustHaveBalanceEqualTo(eurAccount.getId(), 1016.9901573870));
+            .extracting(Account::getId, Account::getBalance)
+            .containsExactly(tuple(eurAccount.getId(), scaledBigDecimal(1016.9239250276)));
 
         assertThat(accountsForClientId3)
-            .satisfiesExactlyInAnyOrder(
-                accountMustHaveBalanceEqualTo(usdAccount.getId(), 920.2996614200),
-                accountMustHaveBalanceEqualTo(audAccount.getId(), 1099.00)
+            .extracting(Account::getId, Account::getBalance)
+            .containsExactlyInAnyOrder(
+                tuple(usdAccount.getId(), scaledBigDecimal(918.5590078212)),
+                tuple(audAccount.getId(), scaledBigDecimal(1099.00))
             );
     }
 
@@ -318,22 +319,6 @@ class TransferFundsIntegrationTest {
         assertThat(body).isNotNull();
 
         return body;
-    }
-
-    private static ThrowingConsumer<Account> accountMustHaveBalanceEqualTo(
-        Integer id,
-        double expectedBalance
-    ) {
-        return acc ->
-            SoftAssertions.assertSoftly(softly -> {
-                softly.assertThat(acc.getId())
-                    .as("account ID")
-                    .isEqualTo(id);
-
-                softly.assertThat(acc.getBalance())
-                    .as("account balance")
-                    .isEqualTo(scaledBigDecimal(expectedBalance));
-            });
     }
 
     private record Paging(int offset, int limit) {

@@ -1,6 +1,7 @@
 account-app:
   currency-converter:
     mock:
+      enabled: true
       supported-currencies: USD, EUR, AUD
       exchange-rates:
         USDEUR: 1.1003280871

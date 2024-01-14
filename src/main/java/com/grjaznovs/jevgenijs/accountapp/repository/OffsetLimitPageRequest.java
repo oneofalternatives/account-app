@@ -1,10 +1,13 @@
 package com.grjaznovs.jevgenijs.accountapp.repository;
 
 import jakarta.annotation.Nonnull;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-// TODO implement equals
+@EqualsAndHashCode
+@ToString
 public class OffsetLimitPageRequest implements Pageable {
 
     private final int offset;

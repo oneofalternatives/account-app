@@ -8,5 +8,4 @@ import java.math.RoundingMode;
 public record MoneySettings(
     int scale,
     RoundingMode roundingMode
-) {
-}
+) { }

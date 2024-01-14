@@ -1,8 +1,8 @@
 package com.grjaznovs.jevgenijs.accountapp.service;
 
-import com.grjaznovs.jevgenijs.accountapp.api.FundTransferException;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
+import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
 import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConversionClient;
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,7 +45,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -61,9 +62,9 @@ class TransactionServiceTest {
     @InjectMocks
     private TransactionService transactionService;
 
+    // TODO verify pageable
     @Test
     void getTransactionHistoryByAccountId_shouldMapTransactionAndAccountData() {
-        // TODO verify pageable
         when(transactionRepository.findAllBySenderAccountIdOrReceiverAccountId(eq(1), any()))
             .thenReturn(
                 new PageImpl<>(
@@ -72,7 +73,6 @@ class TransactionServiceTest {
                         transactionWith(2, 2, 1, 77.00, 88.00, "2023-10-10T10:10"),
                         transactionWith(1, 3, 1, 10.00, 20.00, "2023-09-09T09:09")
                     ),
-                    // TODO pageable
                     PageRequest.ofSize(5),
                     3
                 )
@@ -140,6 +140,8 @@ class TransactionServiceTest {
                 })
             );
         // @formatter:on
+
+        verifyNoMoreInteractions(accountRepository, transactionRepository);
     }
 
     @Test
@@ -159,6 +161,8 @@ class TransactionServiceTest {
         assertThat(exception)
             .isInstanceOf(FundTransferException.class)
             .hasMessage("Amount scale must not be greater than 10");
+
+        verifyNoInteractions(accountRepository, transactionRepository);
     }
 
     @Test
@@ -178,6 +182,8 @@ class TransactionServiceTest {
         assertThat(exception)
             .isInstanceOf(FundTransferException.class)
             .hasMessage("Sender and receiver account must be different");
+
+        verifyNoInteractions(accountRepository, currencyConversionClient, transactionRepository);
     }
 
     @ParameterizedTest
@@ -204,6 +210,9 @@ class TransactionServiceTest {
         assertThat(exception)
             .isInstanceOf(FundTransferException.class)
             .hasMessage(errorMessage);
+
+        verifyNoMoreInteractions(accountRepository);
+        verifyNoInteractions(currencyConversionClient, transactionRepository);
     }
 
     private static Stream<Arguments> parametersFor_transferFunds_shouldVerifyThatAccountsExist() {
@@ -241,6 +250,9 @@ class TransactionServiceTest {
         assertThat(exception)
             .isInstanceOf(FundTransferException.class)
             .hasMessage(errorMessage);
+
+        verifyNoMoreInteractions(accountRepository, currencyConversionClient);
+        verifyNoInteractions(transactionRepository);
     }
 
     private static Stream<Arguments> parametersFor_transferFunds_shouldVerifyThatCurrencyIsSupported() {
@@ -264,20 +276,18 @@ class TransactionServiceTest {
         when(moneySettings.roundingMode())
             .thenReturn(RoundingMode.HALF_UP);
 
+        var eurAccount = accountWith(1, 10, "ACC-0001", 100.00, EUR);
+        var usdAccount = accountWith(2, 11, "ACC-0002", 100.00, USD);
+
         when(accountRepository.findAllById(any()))
-            .thenReturn(
-                List.of(
-                    accountWith(1, 10, "ACC-0001", 100.00, EUR),
-                    accountWith(2, 11, "ACC-0002", 100.00, USD)
-                )
-            );
+            .thenReturn(List.of(eurAccount, usdAccount));
 
         when(currencyConversionClient.getSupportedCurrencies())
             .thenReturn(Set.of(EUR, USD, AUD));
-        when(currencyConversionClient.convert(BigDecimal.valueOf(30.00), USD, EUR, LocalDate.parse("2023-11-11")))
-            .thenReturn(BigDecimal.valueOf(60.00));
+        when(currencyConversionClient.getDirectRate(EUR, USD, LocalDate.parse("2023-11-11")))
+            .thenReturn(BigDecimal.valueOf(1.12));
 
-        when(transactionRepository.saveAndFlush(any()))
+        when(transactionRepository.save(any()))
             .thenAnswer((Answer<Transaction>) invocation -> {
                     var transaction = (Transaction) invocation.getArgument(0);
                     transaction.setId(777);
@@ -287,18 +297,27 @@ class TransactionServiceTest {
 
         var transaction =
             transactionService.transferFunds(
-                1,
-                2,
-                BigDecimal.valueOf(30.00),
+                eurAccount.getId(),
+                usdAccount.getId(),
+                BigDecimal.valueOf(10.00),
                 LocalDateTime.parse("2023-11-11T11:11")
             );
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(transaction.getId()).isEqualTo(777);
-            softly.assertThat(transaction.getSenderAccountId()).isEqualTo(1);
-            softly.assertThat(transaction.getReceiverAccountId()).isEqualTo(2);
-            softly.assertThat(transaction.getSourceAmount()).isEqualTo(scaledBigDecimal(60.0000000000));
-            softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(30.00));
+            softly.assertThat(transaction.getSenderAccountId()).isEqualTo(eurAccount.getId());
+            softly.assertThat(transaction.getReceiverAccountId()).isEqualTo(usdAccount.getId());
+            softly.assertThat(transaction.getSourceAmount()).isEqualTo(scaledBigDecimal(8.9285714286));
+            softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(10.00));
         });
+
+        //noinspection unchecked
+        ArgumentCaptor<Iterable<Account>> updatedAccountCaptor = ArgumentCaptor.forClass(Iterable.class);
+        verify(accountRepository).saveAll(updatedAccountCaptor.capture());
+        var updatedAccounts = updatedAccountCaptor.getValue();
+        assertThat(updatedAccounts)
+            .containsExactlyInAnyOrder(eurAccount, usdAccount);
+
+        verifyNoMoreInteractions(accountRepository, currencyConversionClient, transactionRepository);
     }
 }
