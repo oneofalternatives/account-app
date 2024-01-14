@@ -11,6 +11,7 @@ import com.grjaznovs.jevgenijs.accountapp.repository.AccountRepository;
 import com.grjaznovs.jevgenijs.accountapp.repository.OffsetLimitPageRequest;
 import com.grjaznovs.jevgenijs.accountapp.repository.TransactionRepository;
 import com.grjaznovs.jevgenijs.accountapp.settings.MoneySettings;
+import jakarta.annotation.Nonnull;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -18,9 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -148,11 +147,12 @@ public class TransactionService {
     }
 
     @Transactional
+    @Nonnull
     public Transaction transferFunds(
-        Integer senderAccountId,
-        Integer receiverAccountId,
-        BigDecimal amount,
-        LocalDateTime transactionDate
+        @Nonnull Integer senderAccountId,
+        @Nonnull Integer receiverAccountId,
+        @Nonnull BigDecimal amount,
+        @Nonnull LocalDateTime transactionDate
     ) {
         verifyAmountScale(amount);
         verifyAccountIds(senderAccountId, receiverAccountId);
@@ -163,7 +163,7 @@ public class TransactionService {
                 .stream()
                 .collect(toMap(Account::getId, Function.identity()));
 
-        verifyAccountsArePresent(Set.of(senderAccountId, receiverAccountId), accountsById);
+        verifyAccountsExist(List.of(senderAccountId, receiverAccountId), accountsById);
 
         var senderAccount = accountsById.get(senderAccountId);
         var receiverAccount = accountsById.get(receiverAccountId);
@@ -188,6 +188,7 @@ public class TransactionService {
         senderAccount.setBalance(senderAccount.getBalance().subtract(sourceAmount));
         receiverAccount.setBalance(receiverAccount.getBalance().add(amount));
 
+        // TODO is "flush" needed here?
         accountRepository.saveAllAndFlush(Set.of(senderAccount, receiverAccount));
         return transactionRepository.saveAndFlush(transaction);
     }
@@ -199,17 +200,13 @@ public class TransactionService {
     }
 
     private void verifyAccountIds(Integer senderAccountId, Integer receiverAccountId) {
-        if (senderAccountId == null || receiverAccountId == null) {
-            throw new FundTransferException("Both sender and receiver accounts IDs must be passed");
-        }
-
         if (senderAccountId.equals(receiverAccountId)) {
-            throw new FundTransferException("Sender account and receiver account are the same");
+            throw new FundTransferException("Sender and receiver account must be different");
         }
     }
 
-    private void verifyAccountsArePresent(
-        Set<Integer> requestedAccountIds,
+    private void verifyAccountsExist(
+        List<Integer> requestedAccountIds,
         Map<Integer, Account> accounts
     ) {
         var nonExistingAccountIds =
@@ -217,7 +214,7 @@ public class TransactionService {
                 .stream()
                 .filter(not(accounts.keySet()::contains))
                 .map(String::valueOf)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
         if (isNotEmpty(nonExistingAccountIds)) {
             throw new FundTransferException(
@@ -235,7 +232,8 @@ public class TransactionService {
         var unsupportedCurrencies =
             Arrays.stream(currencies)
                 .filter(not(supportedCurrencies::contains))
-                .collect(Collectors.toSet());
+                .distinct()
+                .collect(Collectors.toList());
 
         if (isNotEmpty(unsupportedCurrencies)) {
             throw new FundTransferException(

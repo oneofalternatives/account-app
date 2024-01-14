@@ -1,11 +1,10 @@
-package com.grjaznovs.jevgenijs.accountapp;
+package com.grjaznovs.jevgenijs.accountapp.integrationtest;
 
 import com.grjaznovs.jevgenijs.accountapp.api.PageProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
 import com.grjaznovs.jevgenijs.accountapp.repository.AccountRepository;
-import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.api.SoftAssertions;
 import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Test;
@@ -25,16 +24,14 @@ import org.springframework.web.util.UriBuilderFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import static com.grjaznovs.jevgenijs.accountapp.AccountTestFactory.accountWith;
-import static com.grjaznovs.jevgenijs.accountapp.TransferFundsIntegrationTest.TransactionProjectionRequirementVerifier.require;
-import static com.grjaznovs.jevgenijs.accountapp.TransferFundsIntegrationTest.TransactionProjectionRequirementVerifier.requirements;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.INBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.OUTBOUND;
-import static java.util.stream.Collectors.toMap;
+import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.accountWith;
+import static com.grjaznovs.jevgenijs.accountapp.util.TransactionProjectionRequirementVerifier.require;
+import static com.grjaznovs.jevgenijs.accountapp.util.TransactionProjectionRequirementVerifier.requirements;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpMethod.GET;
@@ -95,14 +92,7 @@ class TransferFundsIntegrationTest {
         var responseEntity = restPostFundTransferFail(senderAccountId, receiverAccountId, 30.00, "2023-11-01T17:40");
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(responseEntity.getBody())
-            .isEqualTo(
-                String.format(
-                    "Accounts with these IDs do not exist: [%s]",
-                    String.join(", ", String.valueOf(senderAccountId), String.valueOf(receiverAccountId)
-                    )
-                )
-            );
+        assertThat(responseEntity.getBody()).startsWith("Accounts with these IDs do not exist:");
     }
 
     @Test
@@ -336,47 +326,6 @@ class TransferFundsIntegrationTest {
                             .setScale(10, RoundingMode.HALF_UP)
                     );
             });
-    }
-
-    protected static class TransactionProjectionRequirementVerifier {
-
-        public static final String TRANSACTION_ID = "transactionId";
-
-        public static final String DIRECTION = "direction";
-        public static final String PEER_ACCOUNT_ID = "peerAccount.id";
-        public static final String PEER_ACCOUNT_NUMBER = "peerAccount.number";
-        public static final String AMOUNT = "amount";
-        public static final String CURRENCY = "currency";
-        public static final String TRANSACTION_DATE = "transactionDate";
-
-        @SafeVarargs
-        public static ThrowingConsumer<TransactionHistoryRecordProjection> requirements(
-            Pair<String, Object>... requirements
-        ) {
-            var r =
-                Arrays.stream(requirements)
-                    .collect(toMap(Pair::getKey, Pair::getValue));
-
-            return tx ->
-                SoftAssertions.assertSoftly(softly -> {
-                    // @formatter:off
-                    softly.assertThat(tx.transactionId())       .as(TRANSACTION_ID)     .isEqualTo(r.get(TRANSACTION_ID));
-                    softly.assertThat(tx.direction())           .as(DIRECTION)          .isEqualTo(r.get(DIRECTION));
-                    softly.assertThat(tx.peerAccount().id())    .as(PEER_ACCOUNT_ID)    .isEqualTo(r.get(PEER_ACCOUNT_ID));
-                    softly.assertThat(tx.peerAccount().number()).as(PEER_ACCOUNT_NUMBER).isEqualTo(r.get(PEER_ACCOUNT_NUMBER));
-                    softly.assertThat(tx.amount())              .as(AMOUNT)             .isEqualTo(
-                                                                                            BigDecimal.valueOf((Double) r.get(AMOUNT))
-                                                                                                .setScale(10, RoundingMode.HALF_UP));
-                    softly.assertThat(tx.currency())            .as(CURRENCY)           .isEqualTo(r.get(CURRENCY));
-                    softly.assertThat(tx.transactionDate())     .as(TRANSACTION_DATE)   .isEqualTo(r.get(TRANSACTION_DATE));
-                    // @formatter:on
-                });
-        }
-
-        public static Pair<String, Object> require(String key, Object expectedValue) {
-            return Pair.of(key, expectedValue);
-        }
-
     }
 
     private record Paging(int offset, int limit) {

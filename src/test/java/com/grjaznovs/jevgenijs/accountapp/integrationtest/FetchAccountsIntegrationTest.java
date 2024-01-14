@@ -1,4 +1,4 @@
-package com.grjaznovs.jevgenijs.accountapp;
+package com.grjaznovs.jevgenijs.accountapp.integrationtest;
 
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.repository.AccountRepository;
@@ -18,7 +18,7 @@ import org.springframework.web.util.UriBuilderFactory;
 import java.util.List;
 import java.util.Set;
 
-import static com.grjaznovs.jevgenijs.accountapp.AccountTestFactory.accountWith;
+import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.accountWith;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpMethod.GET;
