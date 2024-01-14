@@ -55,11 +55,7 @@ public class TransactionService {
         int offset,
         int limit
     ) {
-        return
-            transactionRepository
-                .findAll(
-                    OffsetLimitPageRequest.of(offset, limit, Sort.by(DESC, "transactionDate"))
-                );
+        return transactionRepository.findAll(OffsetLimitPageRequest.of(offset, limit, Sort.by(DESC, "transactionDate")));
     }
 
     public PageProjection<TransactionHistoryRecordProjection> getTransactionHistoryByAccountId(
@@ -71,11 +67,7 @@ public class TransactionService {
             transactionRepository
                 .findAllBySenderAccountIdOrReceiverAccountId(
                     accountId,
-                    OffsetLimitPageRequest.of(
-                        offset,
-                        limit,
-                        Sort.by(DESC, "transactionDate")
-                    )
+                    OffsetLimitPageRequest.of(offset, limit, Sort.by(DESC, "transactionDate"))
                 );
 
         var transactions = transactionsPage.getContent();
@@ -91,48 +83,27 @@ public class TransactionService {
                 .stream()
                 .collect(toMap(Account::getId, Function.identity()));
 
+        var transactionProjections =
+            transactions.stream()
+                .map(tx -> {
+                    var accountData = collectTransactionDataFromAccount(accountId, tx, accountsById);
 
-        var transactionProjections = transactions.stream()
-            .map(tx -> {
-                var direction =
-                    tx.getSenderAccountId() == accountId
-                        ? OUTBOUND
-                        : INBOUND;
-
-                var senderAccount = accountsById.get(tx.getSenderAccountId());
-                var receiverAccount = accountsById.get(tx.getReceiverAccountId());
-
-                var account =
-                    direction == OUTBOUND
-                        ? receiverAccount
-                        : senderAccount;
-
-                var amount =
-                    direction == OUTBOUND
-                        ? tx.getSourceAmount()
-                        : tx.getTargetAmount();
-
-                var currency =
-                    direction == OUTBOUND
-                        ? senderAccount.getCurrency()
-                        : receiverAccount.getCurrency();
-
-                // @formatter:off
-                return
-                    TransactionHistoryRecordProjection.buildWith($ -> {
-                        $.transactionId     = tx.getId();
-                        $.peerAccount       = AccountBaseInfoProjection.buildWith($$ -> {
-                                                $$.id = account.getId();
-                                                $$.number = account.getNumber();
-                                            });
-                        $.direction         = direction;
-                        $.amount            = amount;
-                        $.currency          = currency;
-                        $.transactionDate   = tx.getTransactionDate();
-                    });
-                // @formatter:on
-            })
-            .toList();
+                    // @formatter:off
+                    return
+                        TransactionHistoryRecordProjection.buildWith($ -> {
+                            $.transactionId     = tx.getId();
+                            $.peerAccount       = AccountBaseInfoProjection.buildWith($$ -> {
+                                                    $$.id       = accountData.account().getId();
+                                                    $$.number   = accountData.account().getNumber();
+                                                });
+                            $.direction         = accountData.direction();
+                            $.amount            = accountData.amount();
+                            $.currency          = accountData.currency();
+                            $.transactionDate   = tx.getTransactionDate();
+                        });
+                    // @formatter:on
+                })
+                .toList();
 
         return
             new PageProjection<>(
@@ -246,4 +217,45 @@ public class TransactionService {
             );
         }
     }
+
+    private static TransactionDataFromAccount collectTransactionDataFromAccount(
+        int accountId,
+        Transaction tx,
+        Map<Integer, Account> accountsById
+    ) {
+        var direction =
+            tx.getSenderAccountId() == accountId
+                ? OUTBOUND
+                : INBOUND;
+
+        var senderAccount = accountsById.get(tx.getSenderAccountId());
+        var receiverAccount = accountsById.get(tx.getReceiverAccountId());
+
+        var account =
+            direction == OUTBOUND
+                ? receiverAccount
+                : senderAccount;
+
+        var amount =
+            direction == OUTBOUND
+                ? tx.getSourceAmount()
+                : tx.getTargetAmount();
+
+        var currency =
+            direction == OUTBOUND
+                ? senderAccount.getCurrency()
+                : receiverAccount.getCurrency();
+
+        return new TransactionDataFromAccount(direction, account, amount, currency);
+    }
+
+    private record TransactionDataFromAccount(
+        TransactionHistoryRecordProjection.Direction direction,
+        Account account,
+        BigDecimal amount,
+        String currency) { }
 }
+
+
+
+
