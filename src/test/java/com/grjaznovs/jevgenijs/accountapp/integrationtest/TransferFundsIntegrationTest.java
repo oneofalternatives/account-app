@@ -22,7 +22,6 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -30,8 +29,7 @@ import java.util.Set;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.INBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.OUTBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.accountWith;
-import static com.grjaznovs.jevgenijs.accountapp.util.TransactionProjectionRequirementVerifier.require;
-import static com.grjaznovs.jevgenijs.accountapp.util.TransactionProjectionRequirementVerifier.requirements;
+import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpMethod.GET;
@@ -119,73 +117,85 @@ class TransferFundsIntegrationTest {
 
         // @formatter:off
         assertThat(eurAccountTransactionHistoryPage.content())
-            .satisfiesExactly(
-                requirements(
-                    require(    "transactionId",        usdEurTransaction.getId()               ),
-                    require(    "direction",            INBOUND                                 ),
-                    require(    "peerAccount.id",       usdAccount.getId()                      ),
-                    require(    "peerAccount.number",   usdAccount.getNumber()                  ),
-                    require(    "amount",               50.00                                   ),
-                    require(    "currency",             eurAccount.getCurrency()                ),
-                    require(    "transactionDate",      usdEurTransaction.getTransactionDate()  )
-                ),
-                requirements(
-                    require(    "transactionId",        eurUsdTransaction.getId()               ),
-                    require(    "direction",            OUTBOUND                                ),
-                    require(    "peerAccount.id",       usdAccount.getId()                      ),
-                    require(    "peerAccount.number",   usdAccount.getNumber()                  ),
-                    require(    "amount",               33.0098426130                           ),
-                    require(    "currency",             eurAccount.getCurrency()                ),
-                    require(    "transactionDate",      eurUsdTransaction.getTransactionDate()  )
-                )
+            .containsExactly(
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId     = usdEurTransaction.getId();
+                    $.direction         = INBOUND;
+                    $.peerAccount       = TransactionHistoryRecordProjection.AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id       = usdAccount.getId();
+                                            $$.number   = usdAccount.getNumber();
+                                        });
+                    $.amount            = scaledBigDecimal(50.00);
+                    $.currency          = eurAccount.getCurrency();
+                    $.transactionDate   = usdEurTransaction.getTransactionDate();
+                }),
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId     = eurUsdTransaction.getId();
+                    $.direction         = OUTBOUND;
+                    $.peerAccount       = TransactionHistoryRecordProjection.AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id       = usdAccount.getId();
+                                            $$.number   = usdAccount.getNumber();
+                                        });
+                    $.amount            = scaledBigDecimal(33.0098426130);
+                    $.currency          = eurAccount.getCurrency();
+                    $.transactionDate   = eurUsdTransaction.getTransactionDate();
+                })
             );
         // @formatter:on
 
         // @formatter:off
         assertThat(usdAccountTransactionHistoryPage.content())
-            .satisfiesExactly(
-                requirements(
-                    require(    "transactionId",        usdAudTransaction.getId()               ),
-                    require(    "direction",            OUTBOUND                                ),
-                    require(    "peerAccount.id",       audAccount.getId()                      ),
-                    require(    "peerAccount.number",   audAccount.getNumber()                  ),
-                    require(    "amount",               64.35033858                             ),
-                    require(    "currency",             usdAccount.getCurrency()                ),
-                    require(    "transactionDate",      usdAudTransaction.getTransactionDate()  )
-                ),
-                requirements(
-                    require(    "transactionId",        usdEurTransaction.getId()               ),
-                    require(    "direction",            OUTBOUND                                ),
-                    require(    "peerAccount.id",       eurAccount.getId()                      ),
-                    require(    "peerAccount.number",   eurAccount.getNumber()                  ),
-                    require(    "amount",               45.35                                   ),
-                    require(    "currency",             usdAccount.getCurrency()                ),
-                    require(    "transactionDate",      usdEurTransaction.getTransactionDate()  )
-                ),
-                requirements(
-                    require(    "transactionId",        eurUsdTransaction.getId()               ),
-                    require(    "direction",            INBOUND                                 ),
-                    require(    "peerAccount.id",       eurAccount.getId()                      ),
-                    require(    "peerAccount.number",   eurAccount.getNumber()                  ),
-                    require(    "amount",               30.00                                   ),
-                    require(    "currency",             usdAccount.getCurrency()                ),
-                    require(    "transactionDate",      eurUsdTransaction.getTransactionDate()  )
-                )
+            .containsExactly(
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId     = usdAudTransaction.getId();
+                    $.direction         = OUTBOUND;
+                    $.peerAccount       = TransactionHistoryRecordProjection.AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id       = audAccount.getId();
+                                            $$.number   = audAccount.getNumber();
+                                        });
+                    $.amount            = scaledBigDecimal(64.35033858);
+                    $.currency          = usdAccount.getCurrency();
+                    $.transactionDate   = usdAudTransaction.getTransactionDate();
+                }),
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId     = usdEurTransaction.getId();
+                    $.direction         = OUTBOUND;
+                    $.peerAccount       = TransactionHistoryRecordProjection.AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id       = eurAccount.getId();
+                                            $$.number   = eurAccount.getNumber();
+                                        });
+                    $.amount            = scaledBigDecimal(45.35);
+                    $.currency          = usdAccount.getCurrency();
+                    $.transactionDate   = usdEurTransaction.getTransactionDate();
+                }),
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId     = eurUsdTransaction.getId();
+                    $.direction         = INBOUND;
+                    $.peerAccount       = TransactionHistoryRecordProjection.AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id       = eurAccount.getId();
+                                            $$.number   = eurAccount.getNumber();
+                                        });
+                    $.amount            = scaledBigDecimal(30.00);
+                    $.currency          = usdAccount.getCurrency();
+                    $.transactionDate   = eurUsdTransaction.getTransactionDate();
+                })
             );
         // @formatter:on
 
         // @formatter:off
         assertThat(audAccountTransactionHistoryPage.content())
-            .satisfiesExactly(
-                requirements(
-                    require(    "transactionId",        usdAudTransaction.getId()                  ),
-                    require(    "direction",            INBOUND                                 ),
-                    require(    "peerAccount.id",       usdAccount.getId()                      ),
-                    require(    "peerAccount.number",   usdAccount.getNumber()                  ),
-                    require(    "amount",               99.00                                   ),
-                    require(    "currency",             audAccount.getCurrency()                ),
-                    require(    "transactionDate",      usdAudTransaction.getTransactionDate()     )
-                )
+            .containsExactly(
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId     = usdAudTransaction.getId();
+                    $.direction         = INBOUND;
+                    $.peerAccount       = TransactionHistoryRecordProjection.AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id       = usdAccount.getId();
+                                            $$.number   = usdAccount.getNumber();
+                                        });
+                    $.amount            = scaledBigDecimal(99.00);
+                    $.currency          = audAccount.getCurrency();
+                    $.transactionDate   = usdAudTransaction.getTransactionDate();
+                })
             );
         // @formatter:on
 
@@ -321,10 +331,7 @@ class TransferFundsIntegrationTest {
 
                 softly.assertThat(acc.getBalance())
                     .as("account balance")
-                    .isEqualTo(
-                        BigDecimal.valueOf(expectedBalance)
-                            .setScale(10, RoundingMode.HALF_UP)
-                    );
+                    .isEqualTo(scaledBigDecimal(expectedBalance));
             });
     }
 

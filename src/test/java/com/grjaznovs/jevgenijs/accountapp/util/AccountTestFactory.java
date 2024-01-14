@@ -2,8 +2,7 @@ package com.grjaznovs.jevgenijs.accountapp.util;
 
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 
 public class AccountTestFactory {
 
@@ -18,7 +17,7 @@ public class AccountTestFactory {
         account.setId(accountId);
         account.setClientId(clientId);
         account.setNumber(accountNumber);
-        account.setBalance(BigDecimal.valueOf(balance).setScale(10, RoundingMode.HALF_UP));
+        account.setBalance(scaledBigDecimal(balance));
         account.setCurrency(currency);
         return account;
     }
@@ -32,7 +31,7 @@ public class AccountTestFactory {
         var account = new Account();
         account.setClientId(clientId);
         account.setNumber(accountNumber);
-        account.setBalance(BigDecimal.valueOf(balance).setScale(10, RoundingMode.HALF_UP));
+        account.setBalance(scaledBigDecimal(balance));
         account.setCurrency(currency);
         return account;
     }

@@ -2,11 +2,9 @@ package com.grjaznovs.jevgenijs.accountapp.util;
 
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import static com.grjaznovs.jevgenijs.accountapp.util.MoneyConstants.ROUNDING_MODE;
-import static com.grjaznovs.jevgenijs.accountapp.util.MoneyConstants.SCALE;
+import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 
 public class TransactionTestFactory {
 
@@ -22,8 +20,8 @@ public class TransactionTestFactory {
         transaction.setId(transactionId);
         transaction.setSenderAccountId(senderAccountId);
         transaction.setReceiverAccountId(receiverAccountId);
-        transaction.setSourceAmount(BigDecimal.valueOf(sourceAmount).setScale(SCALE, ROUNDING_MODE));
-        transaction.setTargetAmount(BigDecimal.valueOf(targetAmount).setScale(SCALE, ROUNDING_MODE));
+        transaction.setSourceAmount(scaledBigDecimal(sourceAmount));
+        transaction.setTargetAmount(scaledBigDecimal(targetAmount));
         transaction.setTransactionDate(LocalDateTime.parse(transactionDate));
         return transaction;
     }

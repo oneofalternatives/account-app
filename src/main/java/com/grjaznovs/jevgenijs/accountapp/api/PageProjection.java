@@ -1,7 +1,5 @@
 package com.grjaznovs.jevgenijs.accountapp.api;
 
-import jakarta.annotation.Nonnull;
-
 import java.util.List;
 
 public record PageProjection<T>(

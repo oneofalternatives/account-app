@@ -1,6 +1,8 @@
 package com.grjaznovs.jevgenijs.accountapp.service;
 
 import com.grjaznovs.jevgenijs.accountapp.api.FundTransferException;
+import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
+import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
 import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConversionClient;
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
@@ -33,11 +35,9 @@ import java.util.stream.StreamSupport;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.INBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.OUTBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.util.AccountTestFactory.accountWith;
-import static com.grjaznovs.jevgenijs.accountapp.util.MoneyConstants.ROUNDING_MODE;
 import static com.grjaznovs.jevgenijs.accountapp.util.MoneyConstants.SCALE;
-import static com.grjaznovs.jevgenijs.accountapp.util.TransactionProjectionRequirementVerifier.require;
-import static com.grjaznovs.jevgenijs.accountapp.util.TransactionProjectionRequirementVerifier.requirements;
 import static com.grjaznovs.jevgenijs.accountapp.util.TransactionTestFactory.transactionWith;
+import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -101,38 +101,42 @@ class TransactionServiceTest {
 
         var page = transactionService.getTransactionHistoryByAccountId(1, 0, 10);
 
-        assertThat(page).isNotNull();
         // @formatter:off
         assertThat(page.content())
-            .isNotEmpty()
-            .satisfiesExactly(
-                requirements(
-                    require(    "transactionId",        3                                       ),
-                    require(    "direction",            OUTBOUND                                ),
-                    require(    "peerAccount.id",       2                                       ),
-                    require(    "peerAccount.number",   "ACC-0002"                              ),
-                    require(    "amount",               25.00                                   ),
-                    require(    "currency",             "EUR"                                   ),
-                    require(    "transactionDate",      LocalDateTime.parse("2023-11-11T11:11") )
-                ),
-                requirements(
-                    require(    "transactionId",        2                                       ),
-                    require(    "direction",            INBOUND                                 ),
-                    require(    "peerAccount.id",       2                                       ),
-                    require(    "peerAccount.number",   "ACC-0002"                              ),
-                    require(    "amount",               88.00                                   ),
-                    require(    "currency",             "EUR"                                   ),
-                    require(    "transactionDate",      LocalDateTime.parse("2023-10-10T10:10") )
-                ),
-                requirements(
-                    require(    "transactionId",        1                                       ),
-                    require(    "direction",            INBOUND                                 ),
-                    require(    "peerAccount.id",       3                                       ),
-                    require(    "peerAccount.number",   "ACC-0003"                              ),
-                    require(    "amount",               20.00                                   ),
-                    require(    "currency",             "EUR"                                   ),
-                    require(    "transactionDate",      LocalDateTime.parse("2023-09-09T09:09") )
-                )
+            .containsExactly(
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId =   3;
+                    $.direction =       OUTBOUND;
+                    $.peerAccount =     AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id = 2;
+                                            $$.number = "ACC-0002";
+                                        });
+                    $.amount =          scaledBigDecimal(25.00);
+                    $.currency =        "EUR";
+                    $.transactionDate = LocalDateTime.parse("2023-11-11T11:11");
+                }),
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId =   2;
+                    $.direction =       INBOUND;
+                    $.peerAccount =     AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id = 2;
+                                            $$.number = "ACC-0002";
+                                        });
+                    $.amount =          scaledBigDecimal(88.00);
+                    $.currency =        "EUR";
+                    $.transactionDate = LocalDateTime.parse("2023-10-10T10:10");
+                }),
+                TransactionHistoryRecordProjection.buildWith($ -> {
+                    $.transactionId =   1;
+                    $.direction =       INBOUND;
+                    $.peerAccount =     AccountBaseInfoProjection.buildWith($$ -> {
+                                            $$.id = 3;
+                                            $$.number = "ACC-0003";
+                                        });
+                    $.amount =          scaledBigDecimal(20.00);
+                    $.currency =        "EUR";
+                    $.transactionDate = LocalDateTime.parse("2023-09-09T09:09");
+                })
             );
         // @formatter:on
     }
@@ -292,12 +296,8 @@ class TransactionServiceTest {
             softly.assertThat(transaction.getId()).isEqualTo(777);
             softly.assertThat(transaction.getSenderAccountId()).isEqualTo(1);
             softly.assertThat(transaction.getReceiverAccountId()).isEqualTo(2);
-            softly.assertThat(transaction.getSourceAmount()).isEqualTo(bigDecimal(60.0000000000));
+            softly.assertThat(transaction.getSourceAmount()).isEqualTo(scaledBigDecimal(60.0000000000));
             softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(30.00));
         });
-    }
-
-    private BigDecimal bigDecimal(double value) {
-        return BigDecimal.valueOf(value).setScale(SCALE, ROUNDING_MODE);
     }
 }

@@ -117,18 +117,20 @@ public class TransactionService {
                         ? senderAccount.getCurrency()
                         : receiverAccount.getCurrency();
 
+                // @formatter:off
                 return
-                    new TransactionHistoryRecordProjection(
-                        tx.getId(),
-                        new AccountBaseInfoProjection(
-                            account.getId(),
-                            account.getNumber()
-                        ),
-                        direction,
-                        amount,
-                        currency,
-                        tx.getTransactionDate()
-                    );
+                    TransactionHistoryRecordProjection.buildWith($ -> {
+                        $.transactionId     = tx.getId();
+                        $.peerAccount       = AccountBaseInfoProjection.buildWith($$ -> {
+                                                $$.id = account.getId();
+                                                $$.number = account.getNumber();
+                                            });
+                        $.direction         = direction;
+                        $.amount            = amount;
+                        $.currency          = currency;
+                        $.transactionDate   = tx.getTransactionDate();
+                    });
+                // @formatter:on
             })
             .toList();
 
