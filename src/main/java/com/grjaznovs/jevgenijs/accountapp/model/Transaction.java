@@ -20,9 +20,13 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private Integer senderAccountId;
+    @ManyToOne
+    @JoinColumn(name = "sender_account_id")
+    private Account senderAccount;
 
-    private Integer receiverAccountId;
+    @ManyToOne
+    @JoinColumn(name = "receiverAccountId")
+    private Account receiverAccount;
 
     @Column(precision = 16, scale = 10)
     private BigDecimal sourceAmount;

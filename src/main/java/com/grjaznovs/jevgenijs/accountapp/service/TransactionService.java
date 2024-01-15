@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.INBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.OUTBOUND;
@@ -72,21 +71,10 @@ public class TransactionService {
 
         var transactions = transactionsPage.getContent();
 
-        var otherAccountIds =
-            transactions.stream()
-                .flatMap(tx -> Stream.of(tx.getSenderAccountId(), tx.getReceiverAccountId()))
-                .collect(Collectors.toSet());
-
-        var accountsById =
-            accountRepository
-                .findAllById(otherAccountIds)
-                .stream()
-                .collect(toMap(Account::getId, Function.identity()));
-
         var transactionProjections =
             transactions.stream()
                 .map(tx -> {
-                    var accountData = collectTransactionDataFromAccount(accountId, tx, accountsById);
+                    var accountData = collectTransactionDataFromAccount(accountId, tx);
 
                     // @formatter:off
                     return
@@ -150,8 +138,8 @@ public class TransactionService {
                 : convert(amount, sourceCurrency, targetCurrency, transactionDate);
 
         var transaction = new Transaction();
-        transaction.setSenderAccountId(senderAccountId);
-        transaction.setReceiverAccountId(receiverAccountId);
+        transaction.setSenderAccount(senderAccount);
+        transaction.setReceiverAccount(receiverAccount);
         transaction.setSourceAmount(sourceAmount);
         transaction.setTargetAmount(amount);
         transaction.setTransactionDate(transactionDate);
@@ -225,21 +213,17 @@ public class TransactionService {
 
     private static TransactionDataFromAccount collectTransactionDataFromAccount(
         int accountId,
-        Transaction tx,
-        Map<Integer, Account> accountsById
+        Transaction tx
     ) {
         var direction =
-            tx.getSenderAccountId() == accountId
+            tx.getSenderAccount().getId() == accountId
                 ? OUTBOUND
                 : INBOUND;
 
-        var senderAccount = accountsById.get(tx.getSenderAccountId());
-        var receiverAccount = accountsById.get(tx.getReceiverAccountId());
-
         var account =
             direction == OUTBOUND
-                ? receiverAccount
-                : senderAccount;
+                ? tx.getReceiverAccount()
+                : tx.getSenderAccount();
 
         var amount =
             direction == OUTBOUND
@@ -248,8 +232,8 @@ public class TransactionService {
 
         var currency =
             direction == OUTBOUND
-                ? senderAccount.getCurrency()
-                : receiverAccount.getCurrency();
+                ? tx.getSenderAccount().getCurrency()
+                : tx.getReceiverAccount().getCurrency();
 
         return new TransactionDataFromAccount(direction, account, amount, currency);
     }

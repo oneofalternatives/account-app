@@ -2,7 +2,6 @@ package com.grjaznovs.jevgenijs.accountapp.service;
 
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
-import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeServiceError;
 import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
 import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConversionClient;
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
@@ -19,7 +18,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
 import org.springframework.data.domain.PageImpl;
@@ -31,9 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.INBOUND;
 import static com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.Direction.OUTBOUND;
@@ -67,27 +63,26 @@ class TransactionServiceTest {
     // TODO verify pageable
     @Test
     void getTransactionHistoryByAccountId_shouldMapTransactionAndAccountData() {
+        var eurAccount = accountWith(1, 1, "ACC-0001", 100.00, EUR);
+        var usdAccount = accountWith(2, 1, "ACC-0002", 090.00, USD);
+        var audAccount = accountWith(3, 2, "ACC-0003", 080.00, AUD);
+
         when(transactionRepository.findAllBySenderAccountIdOrReceiverAccountId(eq(1), any()))
             .thenReturn(
                 new PageImpl<>(
                     List.of(
-                        transactionWith(3, 1, 2, 25.00, 35.00, "2023-11-11T11:11"),
-                        transactionWith(2, 2, 1, 77.00, 88.00, "2023-10-10T10:10"),
-                        transactionWith(1, 3, 1, 10.00, 20.00, "2023-09-09T09:09")
+                        transactionWith(3, eurAccount, usdAccount, 25.00, 35.00, "2023-11-11T11:11"),
+                        transactionWith(2, usdAccount, eurAccount, 77.00, 88.00, "2023-10-10T10:10"),
+                        transactionWith(1, audAccount, eurAccount, 10.00, 20.00, "2023-09-09T09:09")
                     ),
                     PageRequest.ofSize(5),
                     3
                 )
             );
 
-        when(accountRepository.findAllById(any()))
+/*        when(accountRepository.findAllById(any()))
             .thenAnswer((Answer<List<Account>>) invocationOnMock -> {
-                var accounts =
-                    List.of(
-                        accountWith(1, 1, "ACC-0001", 100.00, EUR),
-                        accountWith(2, 1, "ACC-0002", 090.00, USD),
-                        accountWith(3, 2, "ACC-0003", 080.00, AUD)
-                    );
+                var accounts = List.of(eurAccount, usdAccount, audAccount);
 
                 //noinspection unchecked
                 var accountIds = StreamSupport.stream(
@@ -100,7 +95,7 @@ class TransactionServiceTest {
                     accounts.stream()
                         .filter(account -> accountIds.contains(account.getId()))
                         .collect(Collectors.toList());
-            });
+            });*/
 
         var page = transactionService.getTransactionHistoryByAccountId(1, 0, 10);
 
@@ -300,8 +295,8 @@ class TransactionServiceTest {
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(transaction.getId()).isEqualTo(777);
-            softly.assertThat(transaction.getSenderAccountId()).isEqualTo(eurAccount.getId());
-            softly.assertThat(transaction.getReceiverAccountId()).isEqualTo(usdAccount.getId());
+            softly.assertThat(transaction.getSenderAccount()).isEqualTo(eurAccount);
+            softly.assertThat(transaction.getReceiverAccount()).isEqualTo(usdAccount);
             softly.assertThat(transaction.getSourceAmount()).isEqualTo(BigDecimal.valueOf(10.00));
             softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(10.00));
         });
@@ -353,8 +348,8 @@ class TransactionServiceTest {
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(transaction.getId()).isEqualTo(777);
-            softly.assertThat(transaction.getSenderAccountId()).isEqualTo(eurAccount.getId());
-            softly.assertThat(transaction.getReceiverAccountId()).isEqualTo(usdAccount.getId());
+            softly.assertThat(transaction.getSenderAccount()).isEqualTo(eurAccount);
+            softly.assertThat(transaction.getReceiverAccount()).isEqualTo(usdAccount);
             softly.assertThat(transaction.getSourceAmount()).isEqualTo(scaledBigDecimal(8.9285714286));
             softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(10.00));
         });
