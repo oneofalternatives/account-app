@@ -1,8 +1,13 @@
 package com.grjaznovs.jevgenijs.accountapp.integration;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeClientError;
 import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeServiceError;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
@@ -20,13 +25,16 @@ public class ExchangeRateHostClient implements CurrencyConversionClient {
 
     private final RestTemplate restTemplate;
     private final ExchangeRateHostIntegrationSettings settings;
+    private final ObjectMapper objectMapper;
 
     public ExchangeRateHostClient(
         RestTemplate exchangeRateHostRestTemplate,
-        ExchangeRateHostIntegrationSettings settings
+        ExchangeRateHostIntegrationSettings settings,
+        ObjectMapper objectMapper
     ) {
         this.restTemplate = exchangeRateHostRestTemplate;
         this.settings = settings;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -40,25 +48,23 @@ public class ExchangeRateHostClient implements CurrencyConversionClient {
                         .build(),
                     HttpMethod.GET,
                     null,
-                    SupportedCurrencyListProjection.class
+                    ObjectNode.class
                 );
 
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new CurrencyExchangeServiceError("Currency exchange service responded with status " + response.getStatusCode());
-        }
+        var supportedCurrencies =
+            handleError(
+                response,
+                "Currency exchange service failed to return list of supported currencies",
+                SupportedCurrencyListProjection.class
+            )
+                .currencies();
 
-        var body = response.getBody();
-
-        if (body == null) {
-            throw new CurrencyExchangeServiceError("Currency exchange service response body is missing");
-        }
-
-        if (!body.success()) {
-            throw new CurrencyExchangeServiceError("Currency exchange service failed to list supported currencies");
+        if (supportedCurrencies.isEmpty()) {
+            throw new CurrencyExchangeClientError("Currency exchange service did not return any supported currencies");
         }
 
         return
-            body.currencies().keySet()
+            supportedCurrencies.keySet()
                 .stream()
                 .filter(currencyCode ->
                     Currency.getAvailableCurrencies()
@@ -84,31 +90,78 @@ public class ExchangeRateHostClient implements CurrencyConversionClient {
                         .build(),
                     HttpMethod.GET,
                     null,
-                    QuotesProjection.class
+                    ObjectNode.class
                 );
 
+        var quotes =
+            handleError(
+                response,
+                "Currency exchange service failed to return quotes",
+                QuotesProjection.class
+            )
+                .quotes();
+
+        if (quotes.size() > 1) {
+            throw new CurrencyExchangeClientError("Currency exchange service returned more than one quote");
+        }
+
+        return
+            quotes.values().stream().findAny()
+                .orElseThrow(() -> new CurrencyExchangeServiceError("Currency exchange service did not return any quotes"));
+    }
+
+    private <T> T handleError(
+        ResponseEntity<ObjectNode> response,
+        String messageForErrorCode,
+        Class<T> successBodyType
+    ) {
         if (!response.getStatusCode().is2xxSuccessful()) {
             throw new CurrencyExchangeServiceError("Currency exchange service responded with status " + response.getStatusCode());
         }
 
-        var body = response.getBody();
+        var bodyJson = response.getBody();
 
-        if (body == null) {
+        if (bodyJson == null) {
             throw new CurrencyExchangeServiceError("Currency exchange service response body is missing");
         }
 
-        if (!body.success()) {
-            throw new CurrencyExchangeServiceError("Currency exchange service failed to return quotes");
+        if (isFailure(bodyJson)) {
+            var error = fromJson(bodyJson, ErrorProjection.class).error();
+
+            throw new CurrencyExchangeServiceError(
+                String.format(
+                    "%s. Reason code: %s. Reason description: %s",
+                    messageForErrorCode,
+                    error.code(),
+                    error.info()
+                )
+            );
         }
 
-        return
-            body.quotes().values().stream().findAny()
-                .orElseThrow(() -> new CurrencyExchangeServiceError("Currency exchange service did not return quotes"));
+        return fromJson(bodyJson, successBodyType);
+    }
+
+    private static boolean isFailure(ObjectNode bodyJson) {
+        //noinspection PointlessBooleanExpression
+        return bodyJson.get("success").asBoolean() == false;
+    }
+
+    private <T> T fromJson(ObjectNode jsonObject, Class<T> type) {
+        try {
+            return objectMapper.treeToValue(jsonObject, type);
+        } catch (JsonProcessingException e) {
+            throw new CurrencyExchangeClientError(e);
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record SupportedCurrencyListProjection(Boolean success, Map<String, String> currencies) { }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record QuotesProjection(Boolean success, Map<String, BigDecimal> quotes) { }
+    private record QuotesProjection(Map<String, BigDecimal> quotes) { }
+
+    private record ErrorProjection(ErrorDetails error) {
+
+        private record ErrorDetails(Integer code, String info) { }
+    }
 }

@@ -1,5 +1,6 @@
 package com.grjaznovs.jevgenijs.accountapp.integration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
@@ -13,11 +14,13 @@ public class CurrencyConversionIntegrationConfig {
     @Bean
     public CurrencyConversionClient exchangeRateHostClient(
         RestTemplate exchangeRateHostRestTemplate,
-        ExchangeRateHostIntegrationSettings settings
+        ExchangeRateHostIntegrationSettings settings,
+        ObjectMapper objectMapper
     ) {
         return new ExchangeRateHostClient(
             exchangeRateHostRestTemplate,
-            settings
+            settings,
+            objectMapper
         );
     }
 
@@ -28,7 +31,6 @@ public class CurrencyConversionIntegrationConfig {
     ) {
         return
             builder
-                .additionalInterceptors()
                 .interceptors(new ExchangeRateHostAuthInterceptor(settings.accessKey()))
                 .build();
     }
