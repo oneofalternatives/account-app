@@ -2,6 +2,7 @@ package com.grjaznovs.jevgenijs.accountapp.service;
 
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
+import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeServiceError;
 import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
 import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConversionClient;
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
@@ -18,6 +19,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
 import org.springframework.data.domain.PageImpl;
@@ -270,7 +272,53 @@ class TransactionServiceTest {
     }
 
     @Test
-    void transferFunds_shouldRegisterTransaction() {
+    void transferFunds_shouldRegisterTransactionWithoutCurrencyConversion() {
+        when(moneySettings.scale())
+            .thenReturn(SCALE);
+
+        var eurAccount = accountWith(1, 10, "ACC-0001", 100.00, EUR);
+        var usdAccount = accountWith(2, 11, "ACC-0002", 100.00, EUR);
+
+        when(accountRepository.findAllById(any()))
+            .thenReturn(List.of(eurAccount, usdAccount));
+
+        when(transactionRepository.save(any()))
+            .thenAnswer((Answer<Transaction>) invocation -> {
+                    var transaction = (Transaction) invocation.getArgument(0);
+                    transaction.setId(777);
+                    return transaction;
+                }
+            );
+
+        var transaction =
+            transactionService.transferFunds(
+                eurAccount.getId(),
+                usdAccount.getId(),
+                BigDecimal.valueOf(10.00),
+                LocalDateTime.parse("2023-11-11T11:11")
+            );
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(transaction.getId()).isEqualTo(777);
+            softly.assertThat(transaction.getSenderAccountId()).isEqualTo(eurAccount.getId());
+            softly.assertThat(transaction.getReceiverAccountId()).isEqualTo(usdAccount.getId());
+            softly.assertThat(transaction.getSourceAmount()).isEqualTo(BigDecimal.valueOf(10.00));
+            softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(10.00));
+        });
+
+        //noinspection unchecked
+        ArgumentCaptor<Iterable<Account>> updatedAccountCaptor = ArgumentCaptor.forClass(Iterable.class);
+        verify(accountRepository).saveAll(updatedAccountCaptor.capture());
+        var updatedAccounts = updatedAccountCaptor.getValue();
+        assertThat(updatedAccounts)
+            .containsExactlyInAnyOrder(eurAccount, usdAccount);
+
+        verifyNoMoreInteractions(accountRepository, transactionRepository);
+        verifyNoInteractions(currencyConversionClient);
+    }
+
+    @Test
+    void transferFunds_shouldRegisterTransactionWithCurrencyConversion() {
         when(moneySettings.scale())
             .thenReturn(SCALE);
         when(moneySettings.roundingMode())
