@@ -26,4 +26,20 @@ public class TransactionTestFactory {
         transaction.setTransactionDate(LocalDateTime.parse(transactionDate));
         return transaction;
     }
+
+    public static Transaction transactionWith(
+        Account senderAccount,
+        Account receiverAccount,
+        double sourceAmount,
+        double targetAmount,
+        LocalDateTime transactionDate
+    ) {
+        var transaction = new Transaction();
+        transaction.setSenderAccount(senderAccount);
+        transaction.setReceiverAccount(receiverAccount);
+        transaction.setSourceAmount(scaledBigDecimal(sourceAmount));
+        transaction.setTargetAmount(scaledBigDecimal(targetAmount));
+        transaction.setTransactionDate(transactionDate);
+        return transaction;
+    }
 }
