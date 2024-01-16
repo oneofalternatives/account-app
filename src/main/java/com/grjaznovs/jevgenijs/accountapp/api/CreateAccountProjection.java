@@ -10,12 +10,12 @@ public record CreateAccountProjection(
     @NotNull
     Integer clientId,
     @NotNull
-    @Size(max = 50)
+    @Size(min = 1, max = 50)
     String number,
     @NotNull
     @Digits(integer = 6, fraction = 10)
     BigDecimal balance,
     @NotNull
-    @Size(max = 3)
+    @Size(min = 3, max = 3)
     String currency
 ) { }
