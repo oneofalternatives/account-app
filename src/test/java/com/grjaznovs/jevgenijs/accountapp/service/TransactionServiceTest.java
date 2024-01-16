@@ -221,6 +221,24 @@ class TransactionServiceTest {
     }
 
     @Test
+    void transferFunds_shouldVerifyThatSourceAccountHasSufficientBalance() {
+        when(moneySettings.scale())
+            .thenReturn(SCALE);
+
+        var eurAccount = accountWith(1, 10, "ACC-0001", 10.00, EUR);
+        var usdAccount = accountWith(2, 11, "ACC-0002", 100.00, EUR);
+
+        when(accountRepository.findAllById(any()))
+            .thenReturn(List.of(eurAccount, usdAccount));
+
+        var exception = catchThrowable(() -> transactionService.transferFunds(1, 2, BigDecimal.valueOf(10.0000000001)));
+
+        assertThat(exception)
+            .isInstanceOf(FundTransferValidationError.class)
+            .hasMessage("Source account has insufficient balance");
+    }
+
+    @Test
     void transferFunds_shouldRegisterTransactionWithoutCurrencyConversion() {
         when(moneySettings.scale())
             .thenReturn(SCALE);
@@ -239,13 +257,7 @@ class TransactionServiceTest {
                 }
             );
 
-        var transaction =
-            transactionService
-                .transferFunds(
-                    eurAccount.getId(),
-                    usdAccount.getId(),
-                    BigDecimal.valueOf(10.00)
-                );
+        var transaction = transactionService.transferFunds(1, 2, BigDecimal.valueOf(10.00));
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(transaction.getId()).isEqualTo(777);

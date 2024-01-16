@@ -138,6 +138,8 @@ public class TransactionService {
                 ? amount
                 : convert(amount, sourceCurrency, targetCurrency);
 
+        verifyThatBalanceIsSufficient(senderAccount.getBalance(), sourceAmount);
+
         var transaction = new Transaction();
         transaction.setSenderAccount(senderAccount);
         transaction.setReceiverAccount(receiverAccount);
@@ -209,6 +211,12 @@ public class TransactionService {
                     String.join(", ", unsupportedCurrencies)
                 )
             );
+        }
+    }
+
+    private static void verifyThatBalanceIsSufficient(BigDecimal accountBalance, BigDecimal transactionAmount) {
+        if (accountBalance.subtract(transactionAmount).compareTo(BigDecimal.ZERO) < 0) {
+            throw new FundTransferValidationError("Source account has insufficient balance");
         }
     }
 
