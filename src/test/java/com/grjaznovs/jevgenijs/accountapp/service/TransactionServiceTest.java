@@ -25,7 +25,6 @@ import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -38,8 +37,8 @@ import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.*;
 import static com.grjaznovs.jevgenijs.accountapp.util.MoneyConstants.SCALE;
 import static com.grjaznovs.jevgenijs.accountapp.util.TransactionTestFactory.transactionWith;
 import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -79,23 +78,6 @@ class TransactionServiceTest {
                     3
                 )
             );
-
-/*        when(accountRepository.findAllById(any()))
-            .thenAnswer((Answer<List<Account>>) invocationOnMock -> {
-                var accounts = List.of(eurAccount, usdAccount, audAccount);
-
-                //noinspection unchecked
-                var accountIds = StreamSupport.stream(
-                        ((Iterable<Integer>) invocationOnMock.getArgument(0)).spliterator(),
-                        false
-                    )
-                    .collect(Collectors.toSet());
-
-                return
-                    accounts.stream()
-                        .filter(account -> accountIds.contains(account.getId()))
-                        .collect(Collectors.toList());
-            });*/
 
         var page = transactionService.getTransactionHistoryByAccountId(1, 0, 10);
 
@@ -146,14 +128,7 @@ class TransactionServiceTest {
         when(moneySettings.scale())
             .thenReturn(SCALE);
 
-        var exception = catchThrowable(() ->
-            transactionService.transferFunds(
-                1,
-                1,
-                BigDecimal.valueOf(0.01234567891),
-                LocalDateTime.parse("2023-11-11T11:11")
-            )
-        );
+        var exception = catchThrowable(() -> transactionService.transferFunds(1, 1, BigDecimal.valueOf(0.01234567891)));
 
         assertThat(exception)
             .isInstanceOf(FundTransferValidationError.class)
@@ -167,14 +142,7 @@ class TransactionServiceTest {
         when(moneySettings.scale())
             .thenReturn(SCALE);
 
-        var exception = catchThrowable(() ->
-            transactionService.transferFunds(
-                1,
-                1,
-                BigDecimal.valueOf(0.0123456789),
-                LocalDateTime.parse("2023-11-11T11:11")
-            )
-        );
+        var exception = catchThrowable(() -> transactionService.transferFunds(1, 1, BigDecimal.valueOf(0.0123456789)));
 
         assertThat(exception)
             .isInstanceOf(FundTransferValidationError.class)
@@ -195,14 +163,7 @@ class TransactionServiceTest {
         when(accountRepository.findAllById(any()))
             .thenReturn(existingAccounts);
 
-        var exception = catchThrowable(() ->
-            transactionService.transferFunds(
-                1,
-                2,
-                BigDecimal.valueOf(0.0123456789),
-                LocalDateTime.parse("2023-11-11T11:11")
-            )
-        );
+        var exception = catchThrowable(() -> transactionService.transferFunds(1, 2, BigDecimal.valueOf(0.0123456789)));
 
         assertThat(exception)
             .isInstanceOf(FundTransferValidationError.class)
@@ -235,14 +196,7 @@ class TransactionServiceTest {
         when(currencyConversionClient.getSupportedCurrencies())
             .thenReturn(Set.of(EUR, USD, AUD));
 
-        var exception = catchThrowable(() ->
-            transactionService.transferFunds(
-                1,
-                2,
-                BigDecimal.valueOf(0.0123456789),
-                LocalDateTime.parse("2023-11-11T11:11")
-            )
-        );
+        var exception = catchThrowable(() -> transactionService.transferFunds(1, 2, BigDecimal.valueOf(0.0123456789)));
 
         assertThat(exception)
             .isInstanceOf(FundTransferValidationError.class)
@@ -286,12 +240,12 @@ class TransactionServiceTest {
             );
 
         var transaction =
-            transactionService.transferFunds(
-                eurAccount.getId(),
-                usdAccount.getId(),
-                BigDecimal.valueOf(10.00),
-                LocalDateTime.parse("2023-11-11T11:11")
-            );
+            transactionService
+                .transferFunds(
+                    eurAccount.getId(),
+                    usdAccount.getId(),
+                    BigDecimal.valueOf(10.00)
+                );
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(transaction.getId()).isEqualTo(777);
@@ -299,6 +253,7 @@ class TransactionServiceTest {
             softly.assertThat(transaction.getReceiverAccount()).isEqualTo(usdAccount);
             softly.assertThat(transaction.getSourceAmount()).isEqualTo(BigDecimal.valueOf(10.00));
             softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(10.00));
+            softly.assertThat(transaction.getTransactionDate()).isCloseTo(LocalDateTime.now(), within(1, SECONDS));
         });
 
         //noinspection unchecked
@@ -314,6 +269,8 @@ class TransactionServiceTest {
 
     @Test
     void transferFunds_shouldRegisterTransactionWithCurrencyConversion() {
+        var now = LocalDateTime.now();
+
         when(moneySettings.scale())
             .thenReturn(SCALE);
         when(moneySettings.roundingMode())
@@ -327,7 +284,7 @@ class TransactionServiceTest {
 
         when(currencyConversionClient.getSupportedCurrencies())
             .thenReturn(Set.of(EUR, USD, AUD));
-        when(currencyConversionClient.getDirectRate(EUR, USD, LocalDate.parse("2023-11-11")))
+        when(currencyConversionClient.getDirectRate(EUR, USD))
             .thenReturn(BigDecimal.valueOf(1.12));
 
         when(transactionRepository.save(any()))
@@ -339,12 +296,12 @@ class TransactionServiceTest {
             );
 
         var transaction =
-            transactionService.transferFunds(
-                eurAccount.getId(),
-                usdAccount.getId(),
-                BigDecimal.valueOf(10.00),
-                LocalDateTime.parse("2023-11-11T11:11")
-            );
+            transactionService
+                .transferFunds(
+                    eurAccount.getId(),
+                    usdAccount.getId(),
+                    BigDecimal.valueOf(10.00)
+                );
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(transaction.getId()).isEqualTo(777);
@@ -352,6 +309,7 @@ class TransactionServiceTest {
             softly.assertThat(transaction.getReceiverAccount()).isEqualTo(usdAccount);
             softly.assertThat(transaction.getSourceAmount()).isEqualTo(scaledBigDecimal(8.9285714286));
             softly.assertThat(transaction.getTargetAmount()).isEqualTo(BigDecimal.valueOf(10.00));
+            softly.assertThat(transaction.getTransactionDate()).isCloseTo(now, within(1, SECONDS));
         });
 
         //noinspection unchecked

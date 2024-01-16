@@ -19,7 +19,6 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -50,10 +49,9 @@ class TransactionControllerTest {
                 .queryParam("senderAccountId", 1)
                 .queryParam("receiverAccountId", 2)
                 .queryParam("amount", BigDecimal.valueOf(10.00))
-                .queryParam("transactionDate", LocalDateTime.parse("2023-11-11T11:11"))
                 .build();
 
-        when(transactionService.transferFunds(1, 2, BigDecimal.valueOf(10.00), LocalDateTime.parse("2023-11-11T11:11")))
+        when(transactionService.transferFunds(1, 2, BigDecimal.valueOf(10.00)))
             .thenThrow(internalException);
 
         mockMvc

@@ -3,7 +3,6 @@ package com.grjaznovs.jevgenijs.accountapp.integration;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Currency;
 import java.util.Set;
 
@@ -12,5 +11,5 @@ public interface CurrencyConversionClient {
 
     Set<Currency> getSupportedCurrencies();
 
-    BigDecimal getDirectRate(Currency fromCurrency, Currency toCurrency, LocalDate date);
+    BigDecimal getDirectRate(Currency fromCurrency, Currency toCurrency);
 }

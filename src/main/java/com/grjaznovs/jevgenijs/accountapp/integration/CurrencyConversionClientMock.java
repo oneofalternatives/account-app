@@ -4,7 +4,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Currency;
 import java.util.Set;
 
@@ -24,7 +23,7 @@ public class CurrencyConversionClientMock implements CurrencyConversionClient {
     }
 
     @Override
-    public BigDecimal getDirectRate(Currency fromCurrency, Currency toCurrency, LocalDate date) {
+    public BigDecimal getDirectRate(Currency fromCurrency, Currency toCurrency) {
         return settings.exchangeRates().get(fromCurrency.getCurrencyCode() + toCurrency.getCurrencyCode());
     }
 }

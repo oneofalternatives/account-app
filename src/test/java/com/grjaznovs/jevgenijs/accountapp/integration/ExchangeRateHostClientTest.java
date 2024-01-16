@@ -19,10 +19,11 @@ import org.springframework.test.web.client.ResponseCreator;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.Currency;
 import java.util.stream.Stream;
 
+import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.EUR;
+import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.USD;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -123,19 +124,12 @@ class ExchangeRateHostClientTest {
         String expectedErrorMessage
     ) {
         server.expect(requestTo(
-                "http://api.exchangerate.host/historical" +
-                    "?source=EUR&currencies=USD&date=2024-01-14&access_key=ACC-KEY-123"
+                "http://api.exchangerate.host/live" +
+                    "?source=EUR&currencies=USD&access_key=ACC-KEY-123"
             ))
             .andRespond(responseCreator);
 
-        assertThatThrownBy(() ->
-            client
-                .getDirectRate(
-                    Currency.getInstance("EUR"),
-                    Currency.getInstance("USD"),
-                    LocalDate.parse("2024-01-14")
-                )
-        )
+        assertThatThrownBy(() -> client.getDirectRate(EUR, USD))
             .isInstanceOf(CurrencyExchangeServiceError.class)
             .hasMessage(expectedErrorMessage);
     }
@@ -143,8 +137,8 @@ class ExchangeRateHostClientTest {
     @Test
     void getDirectRate_shouldPassError() {
         server.expect(requestTo(
-                "http://api.exchangerate.host/historical" +
-                    "?source=EUR&currencies=USD&date=2024-01-14&access_key=ACC-KEY-123"
+                "http://api.exchangerate.host/live" +
+                    "?source=EUR&currencies=USD&access_key=ACC-KEY-123"
             ))
             .andRespond(
                 withSuccess(
@@ -162,14 +156,7 @@ class ExchangeRateHostClientTest {
                 )
             );
 
-        var exception = catchException(() ->
-            client
-                .getDirectRate(
-                    Currency.getInstance("EUR"),
-                    Currency.getInstance("USD"),
-                    LocalDate.parse("2024-01-14")
-                )
-        );
+        var exception = catchException(() -> client.getDirectRate(Currency.getInstance("EUR"), Currency.getInstance("USD")));
 
         assertThat(exception)
             .isInstanceOf(CurrencyExchangeServiceError.class)
@@ -183,8 +170,8 @@ class ExchangeRateHostClientTest {
     @Test
     void getDirectRate_shouldThrowException_whenMoreThanOneCurrencyQuoteReturned() {
         server.expect(requestTo(
-                "http://api.exchangerate.host/historical" +
-                    "?source=EUR&currencies=USD&date=2024-01-14&access_key=ACC-KEY-123"
+                "http://api.exchangerate.host/live" +
+                    "?source=EUR&currencies=USD&access_key=ACC-KEY-123"
             ))
             .andRespond(
                 withSuccess(
@@ -207,14 +194,7 @@ class ExchangeRateHostClientTest {
                 )
             );
 
-        var exception = catchException(() ->
-            client
-                .getDirectRate(
-                    Currency.getInstance("EUR"),
-                    Currency.getInstance("USD"),
-                    LocalDate.parse("2024-01-14")
-                )
-        );
+        var exception = catchException(() -> client.getDirectRate(Currency.getInstance("EUR"), Currency.getInstance("USD")));
 
         assertThat(exception)
             .isInstanceOf(CurrencyExchangeResultInterpretationError.class)
@@ -224,8 +204,8 @@ class ExchangeRateHostClientTest {
     @Test
     void getDirectRate_shouldReturnRate() {
         server.expect(requestTo(
-                "http://api.exchangerate.host/historical" +
-                    "?source=EUR&currencies=USD&date=2024-01-14&access_key=ACC-KEY-123"
+                "http://api.exchangerate.host/live" +
+                    "?source=EUR&currencies=USD&access_key=ACC-KEY-123"
             ))
             .andRespond(
                 withSuccess(
@@ -247,13 +227,7 @@ class ExchangeRateHostClientTest {
                 )
             );
 
-        var exchangeRate =
-            client
-                .getDirectRate(
-                    Currency.getInstance("EUR"),
-                    Currency.getInstance("USD"),
-                    LocalDate.parse("2024-01-14")
-                );
+        var exchangeRate = client.getDirectRate(Currency.getInstance("EUR"), Currency.getInstance("USD"));
 
         assertThat(exchangeRate).isEqualTo(BigDecimal.valueOf(1.0952));
     }

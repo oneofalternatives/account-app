@@ -25,7 +25,6 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Currency;
 import java.util.List;
 import java.util.Set;
@@ -62,9 +61,7 @@ class TransferFundsIntegrationTest {
 
     @Test
     void shouldReturnEmptyTransactionHistoryWhenAccountDoesNotExist() {
-        var nonExistingAccountId =
-            getMaxAccountId()
-                + 1;
+        var nonExistingAccountId = getMaxAccountId() + 1;
 
         var transactionHistoryPage = restGetTransactionHistoryForAccountId(nonExistingAccountId, Paging.of(0, 10));
 
@@ -90,7 +87,7 @@ class TransferFundsIntegrationTest {
 
         var senderAccountId = maxAccountId + 1;
         var receiverAccountId = maxAccountId + 2;
-        var responseEntity = restPostFundTransferFail(senderAccountId, receiverAccountId, 30.00, "2023-11-01T17:40");
+        var responseEntity = restPostFundTransferFail(senderAccountId, receiverAccountId, 30.00);
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(responseEntity.getBody()).startsWith("Accounts with these IDs do not exist:");
@@ -101,15 +98,19 @@ class TransferFundsIntegrationTest {
         when(currencyConversionClientMock.getSupportedCurrencies())
             .thenReturn(currencyConverterMockSettings.supportedCurrencies());
 
-        when(currencyConversionClientMock.getDirectRate(any(), any(), any()))
+        when(currencyConversionClientMock.getDirectRate(any(), any()))
             .thenThrow(new CurrencyExchangeServiceError("Error description"));
 
-        var eurAccount = accountWith(2, "ACC-0001", 1000.00, EUR);
-        var usdAccount = accountWith(3, "ACC-0002", 1000.00, USD);
+        var maxClientId = getMaxClientId();
+        var clientOne = maxClientId + 1;
+        var clientTwo = clientOne + 1;
+
+        var eurAccount = accountWith(clientOne, "ACC-0001", 1000.00, EUR);
+        var usdAccount = accountWith(clientTwo, "ACC-0002", 1000.00, USD);
 
         accountRepository.saveAllAndFlush(Set.of(eurAccount, usdAccount));
 
-        var response = restPostFundTransferFail(eurAccount.getId(), usdAccount.getId(), 30.00, "2023-11-01T17:40");
+        var response = restPostFundTransferFail(eurAccount.getId(), usdAccount.getId(), 30.00);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).isEqualTo("Error description");
@@ -120,7 +121,7 @@ class TransferFundsIntegrationTest {
         when(currencyConversionClientMock.getSupportedCurrencies())
             .thenReturn(currencyConverterMockSettings.supportedCurrencies());
 
-        when(currencyConversionClientMock.getDirectRate(any(), any(), any()))
+        when(currencyConversionClientMock.getDirectRate(any(), any()))
             .thenAnswer((Answer<BigDecimal>) invocation -> {
                 var fromCurrency = (Currency) invocation.getArgument(0);
                 var toCurrency = (Currency) invocation.getArgument(1);
@@ -130,18 +131,21 @@ class TransferFundsIntegrationTest {
                         .get(fromCurrency.getCurrencyCode() + toCurrency.getCurrencyCode());
             });
 
-        var eurAccount = accountWith(2, "ACC-0001", 1000.00, EUR);
-        var usdAccount = accountWith(3, "ACC-0002", 1000.00, USD);
-        var audAccount = accountWith(3, "ACC-0003", 1000.00, AUD);
+        var clientOne = getMaxClientId() + 1;
+        var clientTwo = clientOne + 1;
+
+        var eurAccount = accountWith(clientOne, "ACC-0001", 1000.00, EUR);
+        var usdAccount = accountWith(clientTwo, "ACC-0002", 1000.00, USD);
+        var audAccount = accountWith(clientTwo, "ACC-0003", 1000.00, AUD);
 
         accountRepository.saveAllAndFlush(Set.of(eurAccount, usdAccount, audAccount));
 
         var eurUsdTransaction =
-            restPostFundTransferSuccess(eurAccount.getId(), usdAccount.getId(), 30.00, "2023-11-01T17:40");
+            restPostFundTransferSuccess(eurAccount.getId(), usdAccount.getId(), 30.00);
         var usdEurTransaction =
-            restPostFundTransferSuccess(usdAccount.getId(), eurAccount.getId(), 50.00, "2023-11-01T20:50");
+            restPostFundTransferSuccess(usdAccount.getId(), eurAccount.getId(), 50.00);
         var usdAudTransaction =
-            restPostFundTransferSuccess(usdAccount.getId(), audAccount.getId(), 99.00, "2023-11-02T22:30");
+            restPostFundTransferSuccess(usdAccount.getId(), audAccount.getId(), 99.00);
 
         assertThat(Set.of(eurUsdTransaction, usdEurTransaction, usdAudTransaction))
             .allSatisfy(tx -> assertThat(tx.getId()).isNotNull());
@@ -234,14 +238,14 @@ class TransferFundsIntegrationTest {
             );
         // @formatter:on
 
-        var accountsForClientId2 = restGetAccountsForClientId(2);
-        var accountsForClientId3 = restGetAccountsForClientId(3);
+        var accountsForClientOne = restGetAccountsForClientId(clientOne);
+        var accountsForClientTwo = restGetAccountsForClientId(clientTwo);
 
-        assertThat(accountsForClientId2)
+        assertThat(accountsForClientOne)
             .extracting(Account::getId, Account::getBalance)
             .containsExactly(tuple(eurAccount.getId(), scaledBigDecimal(1016.9239250276)));
 
-        assertThat(accountsForClientId3)
+        assertThat(accountsForClientTwo)
             .extracting(Account::getId, Account::getBalance)
             .containsExactlyInAnyOrder(
                 tuple(usdAccount.getId(), scaledBigDecimal(918.5590078212)),
@@ -276,15 +280,13 @@ class TransferFundsIntegrationTest {
     private Transaction restPostFundTransferSuccess(
         int senderAccountId,
         int receiverAccountId,
-        double amount,
-        String transactionDate
+        double amount
     ) {
         var responseEntity =
             restPostFundTransfer(
                 senderAccountId,
                 receiverAccountId,
                 amount,
-                transactionDate,
                 Transaction.class
             );
 
@@ -294,15 +296,13 @@ class TransferFundsIntegrationTest {
     private ResponseEntity<String> restPostFundTransferFail(
         int senderAccountId,
         int receiverAccountId,
-        double amount,
-        String transactionDate
+        double amount
     ) {
         return
             restPostFundTransfer(
                 senderAccountId,
                 receiverAccountId,
                 amount,
-                transactionDate,
                 String.class
             );
     }
@@ -311,7 +311,6 @@ class TransferFundsIntegrationTest {
         int senderAccountId,
         int receiverAccountId,
         double amount,
-        String transactionDate,
         Class<T> responseBodyType
     ) {
         var url =
@@ -320,7 +319,6 @@ class TransferFundsIntegrationTest {
                 .queryParam("senderAccountId", senderAccountId)
                 .queryParam("receiverAccountId", receiverAccountId)
                 .queryParam("amount", BigDecimal.valueOf(amount))
-                .queryParam("transactionDate", LocalDateTime.parse(transactionDate))
                 .build();
 
         return testRestTemplate.exchange(url, POST, null, responseBodyType);
@@ -354,6 +352,15 @@ class TransferFundsIntegrationTest {
         assertThat(body).isNotNull();
 
         return body;
+    }
+
+    private int getMaxClientId() {
+        return
+            accountRepository
+                .findAll().stream()
+                .map(Account::getClientId)
+                .max(Integer::compareTo)
+                .orElseThrow();
     }
 
     private record Paging(int offset, int limit) {

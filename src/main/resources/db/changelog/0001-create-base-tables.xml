@@ -32,7 +32,7 @@
             </column>
             <column name="source_amount" type="number(16,10)"/>
             <column name="target_amount" type="number(16,10)"/>
-            <column name="transaction_date" type="timestamp"/>
+            <column name="transaction_date" type="timestamp(9)"/>
         </createTable>
     </changeSet>
 

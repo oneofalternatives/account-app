@@ -13,7 +13,6 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Currency;
 import java.util.Map;
 import java.util.Set;
@@ -77,16 +76,15 @@ public class ExchangeRateHostClient implements CurrencyConversionClient {
     }
 
     @Override
-    public BigDecimal getDirectRate(Currency fromCurrency, Currency toCurrency, LocalDate date) {
+    public BigDecimal getDirectRate(Currency fromCurrency, Currency toCurrency) {
         var response =
             restTemplate
                 .exchange(
                     URI_BUILDER_FACTORY
                         .uriString(settings.rootUrl())
-                        .path("/historical")
+                        .path("/live")
                         .queryParam("source", fromCurrency)
                         .queryParam("currencies", toCurrency)
-                        .queryParam("date", date)
                         .build(),
                     HttpMethod.GET,
                     null,

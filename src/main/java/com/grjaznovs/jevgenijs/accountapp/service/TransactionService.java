@@ -112,9 +112,10 @@ public class TransactionService {
     public Transaction transferFunds(
         @Nonnull Integer senderAccountId,
         @Nonnull Integer receiverAccountId,
-        @Nonnull BigDecimal amount,
-        @Nonnull LocalDateTime transactionDate
+        @Nonnull BigDecimal amount
     ) {
+        var transactionDate = LocalDateTime.now();
+
         verifyAmountScale(amount);
         verifyAccountIds(senderAccountId, receiverAccountId);
 
@@ -135,7 +136,7 @@ public class TransactionService {
         var sourceAmount =
             sourceCurrency.equals(targetCurrency)
                 ? amount
-                : convert(amount, sourceCurrency, targetCurrency, transactionDate);
+                : convert(amount, sourceCurrency, targetCurrency);
 
         var transaction = new Transaction();
         transaction.setSenderAccount(senderAccount);
@@ -184,10 +185,10 @@ public class TransactionService {
         }
     }
 
-    private BigDecimal convert(BigDecimal amount, Currency sourceCurrency, Currency targetCurrency, LocalDateTime transactionDate) {
+    private BigDecimal convert(BigDecimal amount, Currency sourceCurrency, Currency targetCurrency) {
         verifyThatCurrenciesAreSupported(sourceCurrency, targetCurrency);
 
-        var directRate = currencyConversionClient.getDirectRate(sourceCurrency, targetCurrency, transactionDate.toLocalDate());
+        var directRate = currencyConversionClient.getDirectRate(sourceCurrency, targetCurrency);
         return amount.divide(directRate, moneySettings.scale(), moneySettings.roundingMode());
     }
 
