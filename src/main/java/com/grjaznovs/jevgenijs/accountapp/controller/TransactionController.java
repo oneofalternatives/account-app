@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
@@ -40,8 +39,8 @@ public class TransactionController {
     })
     @GetMapping(path = "/transaction")
     public Page<Transaction> findAllTransactions(
-        @RequestParam int offset,
-        @RequestParam int limit
+        int offset,
+        int limit
     ) {
         return transactionService.getAllTransactions(offset, limit);
     }
@@ -67,8 +66,10 @@ public class TransactionController {
     @Operation(
         summary = "Transfer funds between two accounts",
         description =
-            "Registers a transaction and updates account balances. " +
-                "If accounts have different currencies, uses currency conversion service.")
+            """
+                Registers transaction and updates account balances.
+                If accounts have different currencies, uses currency conversion service.
+                Returns stored transaction entity.""")
     @ApiResponses({
         @ApiResponse(
             responseCode = "200", description = "Funds transferred successfully",

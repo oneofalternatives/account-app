@@ -41,14 +41,15 @@ public record TransactionHistoryRecordProjection(
         }
 
         public TransactionHistoryRecordProjection build() {
-            return new TransactionHistoryRecordProjection(
-                transactionId,
-                peerAccount,
-                direction,
-                amount,
-                currency,
-                transactionDate
-            );
+            return
+                new TransactionHistoryRecordProjection(
+                    transactionId,
+                    peerAccount,
+                    direction,
+                    amount,
+                    currency,
+                    transactionDate
+                );
         }
     }
 
