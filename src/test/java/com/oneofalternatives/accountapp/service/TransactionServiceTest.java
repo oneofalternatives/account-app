@@ -35,7 +35,6 @@ import java.util.stream.Stream;
 import static com.oneofalternatives.accountapp.util.AccountTestFactory.accountWith;
 import static com.oneofalternatives.accountapp.util.Currencies.*;
 import static com.oneofalternatives.accountapp.util.MoneyConstants.SCALE;
-import static com.oneofalternatives.accountapp.util.TransactionTestFactory.transactionWith;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -58,7 +57,6 @@ class TransactionServiceTest {
     @InjectMocks
     private TransactionService transactionService;
 
-    // TODO verify pageable
     @Test
     void getTransactionHistoryByAccountId_shouldMapTransactionAndAccountData() {
         var eurAccount = accountWith(1, 1, "ACC-0001", 100.00, EUR);

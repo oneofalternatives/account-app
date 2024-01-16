@@ -1,8 +1,6 @@
 package com.oneofalternatives.accountapp.integrationtest;
 
 import com.oneofalternatives.accountapp.model.Account;
-import com.oneofalternatives.accountapp.util.CreateAccountProjectionFactory;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +10,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static com.oneofalternatives.accountapp.util.AccountTestFactory.accountProjectionFor;
+import static com.oneofalternatives.accountapp.util.CreateAccountProjectionFactory.createAccountProjection;
 import static com.oneofalternatives.accountapp.util.Currencies.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
@@ -29,7 +28,7 @@ class AccountIntegrationTest {
     void shouldReturnEmptyListWhenAccountsDoNotExist() {
         var listOfAccounts = rest.getAccountsFor(getMaxClientId() + 1);
 
-        Assertions.assertThat(listOfAccounts).isEmpty();
+        assertThat(listOfAccounts).isEmpty();
     }
 
     @Test
@@ -37,19 +36,19 @@ class AccountIntegrationTest {
         var clientOne = getMaxClientId() + 1;
         var clientTwo = clientOne + 1;
 
-        var eurAccount = rest.putAccountSuccess(CreateAccountProjectionFactory.createAccountProjection(clientOne, "ACC-0001", 1000.00, EUR));
-        var usdAccount = rest.putAccountSuccess(CreateAccountProjectionFactory.createAccountProjection(clientTwo, "ACC-0002", 0900.00, USD));
-        var audAccount = rest.putAccountSuccess(CreateAccountProjectionFactory.createAccountProjection(clientTwo, "ACC-0003", 0800.00, AUD));
+        var eurAccount = rest.putAccountSuccess(createAccountProjection(clientOne, "ACC-0001", 1000.00, EUR));
+        var usdAccount = rest.putAccountSuccess(createAccountProjection(clientTwo, "ACC-0002", 0900.00, USD));
+        var audAccount = rest.putAccountSuccess(createAccountProjection(clientTwo, "ACC-0003", 0800.00, AUD));
 
         var listOfClientOneAccounts = rest.getAccountsFor(clientOne);
 
-        Assertions.assertThat(listOfClientOneAccounts)
+        assertThat(listOfClientOneAccounts)
             .singleElement()
             .isEqualTo(accountProjectionFor(eurAccount));
 
         var listOfClientTwoAccounts = rest.getAccountsFor(clientTwo);
 
-        Assertions.assertThat(listOfClientTwoAccounts)
+        assertThat(listOfClientTwoAccounts)
             .containsExactlyInAnyOrder(
                 accountProjectionFor(usdAccount),
                 accountProjectionFor(audAccount)

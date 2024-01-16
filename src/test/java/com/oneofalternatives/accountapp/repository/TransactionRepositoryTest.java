@@ -21,7 +21,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.oneofalternatives.accountapp.util.AccountTestFactory.accountWith;
-import static com.oneofalternatives.accountapp.util.TransactionTestFactory.transactionWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest

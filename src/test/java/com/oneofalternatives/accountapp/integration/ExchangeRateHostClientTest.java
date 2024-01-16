@@ -39,17 +39,10 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @Import({CurrencyConversionIntegrationConfig.class, ExchangeRateHostClientTest.Configuration.class})
 class ExchangeRateHostClientTest {
 
-    private final MockRestServiceServer server;
-    private final CurrencyConversionClient client;
-
     @Autowired
-    public ExchangeRateHostClientTest(
-        MockRestServiceServer server,
-        CurrencyConversionClient exchangeRateHostClient
-    ) {
-        this.server = server;
-        this.client = exchangeRateHostClient;
-    }
+    private MockRestServiceServer server;
+    @Autowired
+    private CurrencyConversionClient client;
 
     @ParameterizedTest
     @MethodSource("samplesFor_errorResponses")

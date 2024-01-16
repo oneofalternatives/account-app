@@ -23,11 +23,12 @@ public class CurrencyConversionIntegrationConfig {
     ) {
         LOGGER.info("Using real currency exchange client implementation");
 
-        return new ExchangeRateHostClient(
-            exchangeRateHostRestTemplate,
-            settings,
-            objectMapper
-        );
+        return
+            new ExchangeRateHostClient(
+                exchangeRateHostRestTemplate,
+                settings,
+                objectMapper
+            );
     }
 
     @Bean
