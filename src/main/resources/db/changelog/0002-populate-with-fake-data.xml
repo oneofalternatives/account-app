@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="3" author="jgrjaznovs" context="fakedata">
+    <changeSet id="3" author="jgrjaznovs">
         <loadData file="fake-accounts.csv" tableName="account" relativeToChangelogFile="true"/>
     </changeSet>
 

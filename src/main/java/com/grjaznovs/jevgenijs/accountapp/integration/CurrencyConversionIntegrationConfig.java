@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@ConditionalOnProperty(value = "account-app.currency-converter.service.exchangeratehost.enabled", havingValue = "true")
+@ConditionalOnProperty(value = "account-app.currency-converter.mock.enabled", havingValue = "false", matchIfMissing = true)
 public class CurrencyConversionIntegrationConfig {
 
     @Bean

@@ -34,7 +34,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @ExtendWith(SpringExtension.class)
 @RestClientTest(
     components = ExchangeRateHostClient.class,
-    properties = "account-app.currency-converter.service.exchangeratehost.enabled=true")
+    properties = "account-app.currency-converter.mock.enabled=false")
 @Import({CurrencyConversionIntegrationConfig.class, ExchangeRateHostClientTest.Configuration.class})
 class ExchangeRateHostClientTest {
 

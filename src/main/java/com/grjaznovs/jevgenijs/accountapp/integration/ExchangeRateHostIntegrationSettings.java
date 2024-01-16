@@ -7,7 +7,7 @@ import java.time.Duration;
 
 // TODO find out how to create this immutable bean using @Bean
 @ConfigurationProperties(prefix = "account-app.currency-converter.service.exchangeratehost")
-@ConditionalOnProperty(value = "account-app.currency-converter.service.exchangeratehost.enabled", havingValue = "true")
+@ConditionalOnProperty(value = "account-app.currency-converter.mock.enabled", havingValue = "false", matchIfMissing = true)
 public record ExchangeRateHostIntegrationSettings(
     String rootUrl,
     String accessKey,
