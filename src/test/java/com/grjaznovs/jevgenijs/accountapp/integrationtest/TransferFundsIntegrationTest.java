@@ -2,14 +2,19 @@ package com.grjaznovs.jevgenijs.accountapp.integrationtest;
 
 import com.grjaznovs.jevgenijs.accountapp.api.PageProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
+import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeServiceError;
+import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConversionClient;
+import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConverterMockSettings;
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
 import com.grjaznovs.jevgenijs.accountapp.repository.AccountRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
@@ -21,6 +26,7 @@ import org.springframework.web.util.UriBuilderFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Currency;
 import java.util.List;
 import java.util.Set;
 
@@ -31,11 +37,12 @@ import static com.grjaznovs.jevgenijs.accountapp.util.Currencies.*;
 import static com.grjaznovs.jevgenijs.accountapp.util.TypeUtils.scaledBigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
-// TODO Find out why @ActiveProfiles(profiles = {"common"}) didn't work
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -44,18 +51,14 @@ class TransferFundsIntegrationTest {
 
     private static final UriBuilderFactory URI_BUILDER_FACTORY = new DefaultUriBuilderFactory();
 
-    private final AccountRepository accountRepository;
-
-    private final TestRestTemplate testRestTemplate;
-
+    @MockBean
+    private CurrencyConversionClient currencyConversionClientMock;
     @Autowired
-    public TransferFundsIntegrationTest(
-        AccountRepository accountRepository,
-        TestRestTemplate testRestTemplate
-    ) {
-        this.accountRepository = accountRepository;
-        this.testRestTemplate = testRestTemplate;
-    }
+    private CurrencyConverterMockSettings currencyConverterMockSettings;
+    @Autowired
+    private AccountRepository accountRepository;
+    @Autowired
+    private TestRestTemplate testRestTemplate;
 
     @Test
     void shouldReturnEmptyTransactionHistoryWhenAccountDoesNotExist() {
@@ -94,7 +97,39 @@ class TransferFundsIntegrationTest {
     }
 
     @Test
+    void shouldNotRegisterFundTransferWhenCurrencyConversionClientReturnedError() {
+        when(currencyConversionClientMock.getSupportedCurrencies())
+            .thenReturn(currencyConverterMockSettings.supportedCurrencies());
+
+        when(currencyConversionClientMock.getDirectRate(any(), any(), any()))
+            .thenThrow(new CurrencyExchangeServiceError("Error description"));
+
+        var eurAccount = accountWith(2, "ACC-0001", 1000.00, EUR);
+        var usdAccount = accountWith(3, "ACC-0002", 1000.00, USD);
+
+        accountRepository.saveAllAndFlush(Set.of(eurAccount, usdAccount));
+
+        var response = restPostFundTransferFail(eurAccount.getId(), usdAccount.getId(), 30.00, "2023-11-01T17:40");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getBody()).isEqualTo("Error description");
+    }
+
+    @Test
     void shouldRegisterFundTransfer() {
+        when(currencyConversionClientMock.getSupportedCurrencies())
+            .thenReturn(currencyConverterMockSettings.supportedCurrencies());
+
+        when(currencyConversionClientMock.getDirectRate(any(), any(), any()))
+            .thenAnswer((Answer<BigDecimal>) invocation -> {
+                var fromCurrency = (Currency) invocation.getArgument(0);
+                var toCurrency = (Currency) invocation.getArgument(1);
+                return
+                    currencyConverterMockSettings
+                        .exchangeRates()
+                        .get(fromCurrency.getCurrencyCode() + toCurrency.getCurrencyCode());
+            });
+
         var eurAccount = accountWith(2, "ACC-0001", 1000.00, EUR);
         var usdAccount = accountWith(3, "ACC-0002", 1000.00, USD);
         var audAccount = accountWith(3, "ACC-0003", 1000.00, AUD);

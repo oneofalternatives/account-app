@@ -32,6 +32,9 @@ public class CurrencyConversionIntegrationConfig {
         return
             builder
                 .interceptors(new ExchangeRateHostAuthInterceptor(settings.accessKey()))
+                .errorHandler(new NonOperationalResponseErrorHandler())
+                .setConnectTimeout(settings.connectionTimeout())
+                .setReadTimeout(settings.readTimeout())
                 .build();
     }
 }

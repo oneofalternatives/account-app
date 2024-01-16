@@ -2,7 +2,7 @@ package com.grjaznovs.jevgenijs.accountapp.service;
 
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
-import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
+import com.grjaznovs.jevgenijs.accountapp.error.FundTransferValidationError;
 import com.grjaznovs.jevgenijs.accountapp.integration.CurrencyConversionClient;
 import com.grjaznovs.jevgenijs.accountapp.model.Account;
 import com.grjaznovs.jevgenijs.accountapp.model.Transaction;
@@ -156,7 +156,7 @@ class TransactionServiceTest {
         );
 
         assertThat(exception)
-            .isInstanceOf(FundTransferException.class)
+            .isInstanceOf(FundTransferValidationError.class)
             .hasMessage("Amount scale must not be greater than 10");
 
         verifyNoInteractions(accountRepository, transactionRepository);
@@ -177,7 +177,7 @@ class TransactionServiceTest {
         );
 
         assertThat(exception)
-            .isInstanceOf(FundTransferException.class)
+            .isInstanceOf(FundTransferValidationError.class)
             .hasMessage("Sender and receiver account must be different");
 
         verifyNoInteractions(accountRepository, currencyConversionClient, transactionRepository);
@@ -205,7 +205,7 @@ class TransactionServiceTest {
         );
 
         assertThat(exception)
-            .isInstanceOf(FundTransferException.class)
+            .isInstanceOf(FundTransferValidationError.class)
             .hasMessage(errorMessage);
 
         verifyNoMoreInteractions(accountRepository);
@@ -245,7 +245,7 @@ class TransactionServiceTest {
         );
 
         assertThat(exception)
-            .isInstanceOf(FundTransferException.class)
+            .isInstanceOf(FundTransferValidationError.class)
             .hasMessage(errorMessage);
 
         verifyNoMoreInteractions(accountRepository, currencyConversionClient);

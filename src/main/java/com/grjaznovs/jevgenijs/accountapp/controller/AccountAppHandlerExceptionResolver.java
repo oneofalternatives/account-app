@@ -1,6 +1,8 @@
 package com.grjaznovs.jevgenijs.accountapp.controller;
 
-import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
+import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeResultInterpretationError;
+import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeServiceError;
+import com.grjaznovs.jevgenijs.accountapp.error.FundTransferValidationError;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,9 +14,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @ControllerAdvice
 public class AccountAppHandlerExceptionResolver extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler(value = {FundTransferException.class})
+    @ExceptionHandler(FundTransferValidationError.class)
     protected ResponseEntity<Object> handleFundTransferException(
-        FundTransferException exception,
+        FundTransferValidationError exception,
         WebRequest request
     ) {
         return
@@ -23,6 +25,21 @@ public class AccountAppHandlerExceptionResolver extends ResponseEntityExceptionH
                 exception.getMessage(),
                 new HttpHeaders(),
                 HttpStatus.BAD_REQUEST,
+                request
+            );
+    }
+
+    @ExceptionHandler({CurrencyExchangeServiceError.class, CurrencyExchangeResultInterpretationError.class})
+    protected ResponseEntity<Object> currencyExchangeServiceError(
+        RuntimeException exception,
+        WebRequest request
+    ) {
+        return
+            handleExceptionInternal(
+                exception,
+                exception.getMessage(),
+                new HttpHeaders(),
+                HttpStatus.SERVICE_UNAVAILABLE,
                 request
             );
     }

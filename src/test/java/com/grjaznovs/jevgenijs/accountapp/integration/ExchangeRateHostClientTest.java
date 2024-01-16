@@ -1,8 +1,12 @@
 package com.grjaznovs.jevgenijs.accountapp.integration;
 
+import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeResultInterpretationError;
 import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeServiceError;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -11,14 +15,20 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.ResponseCreator;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Currency;
+import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchException;
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.springframework.http.HttpStatus.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @ExtendWith(SpringExtension.class)
@@ -40,34 +50,40 @@ class ExchangeRateHostClientTest {
         this.client = exchangeRateHostClient;
     }
 
-    @Test
-    void getSupportedCurrencies_shouldPassError() {
+    @ParameterizedTest
+    @MethodSource("samplesFor_errorResponses")
+    void getSupportedCurrencies_shouldThrowException(
+        ResponseCreator responseCreator,
+        String errorMessage
+    ) {
         server.expect(requestTo("http://api.exchangerate.host/list?access_key=ACC-KEY-123"))
+            .andRespond(responseCreator);
+
+        assertThatThrownBy(client::getSupportedCurrencies)
+            .isInstanceOf(CurrencyExchangeServiceError.class)
+            .hasMessage(errorMessage);
+    }
+
+    @Test
+    void getSupportedCurrencies_shouldThrowException_whenListIsEmpty() {
+        server
+            .expect(requestTo("http://api.exchangerate.host/list?access_key=ACC-KEY-123"))
             .andRespond(
                 withSuccess(
                     """
                         {
-                          "success": false,
-                          "error": {
-                            "code": 104,
-                            "type": "some_error_code",
-                            "info": "User has reached or exceeded his subscription plan's monthly API request allowance"
-                          }
+                          "success": true,
+                          "terms": "https:\\/\\/currencylayer.com\\/terms",
+                          "privacy": "https:\\/\\/currencylayer.com\\/privacy",
+                          "currencies": { }
                         }
                         """,
                     MediaType.APPLICATION_JSON
                 )
             );
 
-        var exception = catchException(client::getSupportedCurrencies);
-
-        assertThat(exception)
-            .isInstanceOf(CurrencyExchangeServiceError.class)
-            .hasMessage(
-                "Currency exchange service failed to return list of supported currencies. " +
-                    "Reason code: 104. " +
-                    "Reason description: User has reached or exceeded his subscription plan's monthly API request allowance"
-            );
+        assertThatThrownBy(client::getSupportedCurrencies)
+            .isInstanceOf(CurrencyExchangeResultInterpretationError.class);
     }
 
     @Test
@@ -98,6 +114,30 @@ class ExchangeRateHostClientTest {
         assertThat(supportedCurrencies)
             .map(Currency::getCurrencyCode)
             .containsExactlyInAnyOrder("BOB", "BRL", "BSD");
+    }
+
+    @ParameterizedTest
+    @MethodSource("samplesFor_errorResponses")
+    void getDirectRate_shouldThrowException(
+        ResponseCreator responseCreator,
+        String expectedErrorMessage
+    ) {
+        server.expect(requestTo(
+                "http://api.exchangerate.host/historical" +
+                    "?source=EUR&currencies=USD&date=2024-01-14&access_key=ACC-KEY-123"
+            ))
+            .andRespond(responseCreator);
+
+        assertThatThrownBy(() ->
+            client
+                .getDirectRate(
+                    Currency.getInstance("EUR"),
+                    Currency.getInstance("USD"),
+                    LocalDate.parse("2024-01-14")
+                )
+        )
+            .isInstanceOf(CurrencyExchangeServiceError.class)
+            .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -141,6 +181,47 @@ class ExchangeRateHostClientTest {
     }
 
     @Test
+    void getDirectRate_shouldThrowException_whenMoreThanOneCurrencyQuoteReturned() {
+        server.expect(requestTo(
+                "http://api.exchangerate.host/historical" +
+                    "?source=EUR&currencies=USD&date=2024-01-14&access_key=ACC-KEY-123"
+            ))
+            .andRespond(
+                withSuccess(
+                    """
+                        {
+                          "success": true,
+                          "terms": "https:\\/\\/currencylayer.com\\/terms",
+                          "privacy": "https:\\/\\/currencylayer.com\\/privacy",
+                          "historical": true,
+                          "date": "2024-01-14",
+                          "timestamp": 1705267263,
+                          "source": "EUR",
+                          "quotes": {
+                            "EURUSD": 1.0952,
+                            "EURAUD": 1.2345
+                          }
+                        }
+                        """,
+                    MediaType.APPLICATION_JSON
+                )
+            );
+
+        var exception = catchException(() ->
+            client
+                .getDirectRate(
+                    Currency.getInstance("EUR"),
+                    Currency.getInstance("USD"),
+                    LocalDate.parse("2024-01-14")
+                )
+        );
+
+        assertThat(exception)
+            .isInstanceOf(CurrencyExchangeResultInterpretationError.class)
+            .hasMessage("Currency exchange service returned more than one quote");
+    }
+
+    @Test
     void getDirectRate_shouldReturnRate() {
         server.expect(requestTo(
                 "http://api.exchangerate.host/historical" +
@@ -177,6 +258,18 @@ class ExchangeRateHostClientTest {
         assertThat(exchangeRate).isEqualTo(BigDecimal.valueOf(1.0952));
     }
 
+    private static Stream<Arguments> samplesFor_errorResponses() {
+        // @formatter:off
+            return Stream.of(
+                arguments(withStatus(SERVICE_UNAVAILABLE), "Currency exchange service responded with status 503 SERVICE_UNAVAILABLE"),
+                arguments(withStatus(BAD_REQUEST),         "Currency exchange service responded with status 400 BAD_REQUEST"        ),
+                arguments(withStatus(MULTIPLE_CHOICES),    "Currency exchange service responded with status 300 MULTIPLE_CHOICES"   ),
+                arguments(withStatus(CONTINUE),            "Currency exchange service responded with status 100 CONTINUE"           ),
+                arguments(withSuccess(),                   "Currency exchange service response body is missing"                     )
+            );
+            // @formatter:on
+    }
+
     @TestConfiguration
     static class Configuration {
 
@@ -184,7 +277,9 @@ class ExchangeRateHostClientTest {
         public ExchangeRateHostIntegrationSettings exchangeRateHostIntegrationSettings() {
             return new ExchangeRateHostIntegrationSettings(
                 "http://api.exchangerate.host",
-                "ACC-KEY-123"
+                "ACC-KEY-123",
+                Duration.of(1, SECONDS),
+                Duration.of(1, SECONDS)
             );
         }
     }

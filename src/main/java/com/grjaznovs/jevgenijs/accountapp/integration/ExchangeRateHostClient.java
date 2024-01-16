@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeClientError;
+import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeResultInterpretationError;
 import com.grjaznovs.jevgenijs.accountapp.error.CurrencyExchangeServiceError;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -60,7 +60,7 @@ public class ExchangeRateHostClient implements CurrencyConversionClient {
                 .currencies();
 
         if (supportedCurrencies.isEmpty()) {
-            throw new CurrencyExchangeClientError("Currency exchange service did not return any supported currencies");
+            throw new CurrencyExchangeResultInterpretationError("Currency exchange service did not return any supported currencies");
         }
 
         return
@@ -102,7 +102,7 @@ public class ExchangeRateHostClient implements CurrencyConversionClient {
                 .quotes();
 
         if (quotes.size() > 1) {
-            throw new CurrencyExchangeClientError("Currency exchange service returned more than one quote");
+            throw new CurrencyExchangeResultInterpretationError("Currency exchange service returned more than one quote");
         }
 
         return
@@ -150,7 +150,7 @@ public class ExchangeRateHostClient implements CurrencyConversionClient {
         try {
             return objectMapper.treeToValue(jsonObject, type);
         } catch (JsonProcessingException e) {
-            throw new CurrencyExchangeClientError(e);
+            throw new CurrencyExchangeResultInterpretationError(e);
         }
     }
 

@@ -1,6 +1,6 @@
 package com.grjaznovs.jevgenijs.accountapp.service;
 
-import com.grjaznovs.jevgenijs.accountapp.error.FundTransferException;
+import com.grjaznovs.jevgenijs.accountapp.error.FundTransferValidationError;
 import com.grjaznovs.jevgenijs.accountapp.api.PageProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection;
 import com.grjaznovs.jevgenijs.accountapp.api.TransactionHistoryRecordProjection.AccountBaseInfoProjection;
@@ -153,13 +153,13 @@ public class TransactionService {
 
     private void verifyAmountScale(BigDecimal amount) {
         if (amount.scale() > moneySettings.scale()) {
-            throw new FundTransferException("Amount scale must not be greater than " + moneySettings.scale());
+            throw new FundTransferValidationError("Amount scale must not be greater than " + moneySettings.scale());
         }
     }
 
     private void verifyAccountIds(Integer senderAccountId, Integer receiverAccountId) {
         if (senderAccountId.equals(receiverAccountId)) {
-            throw new FundTransferException("Sender and receiver account must be different");
+            throw new FundTransferValidationError("Sender and receiver account must be different");
         }
     }
 
@@ -175,7 +175,7 @@ public class TransactionService {
                 .collect(Collectors.toList());
 
         if (isNotEmpty(nonExistingAccountIds)) {
-            throw new FundTransferException(
+            throw new FundTransferValidationError(
                 String.format(
                     "Accounts with these IDs do not exist: [%s]",
                     String.join(", ", nonExistingAccountIds)
@@ -202,7 +202,7 @@ public class TransactionService {
                 .collect(Collectors.toList());
 
         if (isNotEmpty(unsupportedCurrencies)) {
-            throw new FundTransferException(
+            throw new FundTransferValidationError(
                 String.format(
                     "Conversion from/to any of these currencies is not supported: [%s]",
                     String.join(", ", unsupportedCurrencies)
