@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="1" author="oneofalternatives">
+        <createTable tableName="account">
+            <column name="id" type="int" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="client_id" type="int">
+                <constraints nullable="true"/>
+            </column>
+            <column name="number" type="varchar(50)"/>
+            <column name="balance" type="number(19,10)"/>
+            <column name="currency" type="varchar(3)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="2" author="oneofalternatives">
+        <createTable tableName="transaction">
+            <column name="id" type="int" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="sender_account_id" type="int">
+                <constraints foreignKeyName="account.id" validateForeignKey="true"/>
+            </column>
+            <column name="receiver_account_id" type="int">
+                <constraints foreignKeyName="account.id" validateForeignKey="true"/>
+            </column>
+            <column name="source_amount" type="number(16,10)"/>
+            <column name="target_amount" type="number(16,10)"/>
+            <column name="transaction_date" type="timestamp(9)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

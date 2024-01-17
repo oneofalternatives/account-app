@@ -1,0 +1,12 @@
+account-app:
+  currency-converter:
+    mock:
+      enabled: true
+      supported-currencies: USD, EUR, AUD
+      exchange-rates:
+        USDEUR: 1.1003280871
+        USDAUD: 1.50
+        EURUSD: 0.907
+        EURAUD: 1.38907
+        AUDUSD: 0.65000342
+        AUDEUR: 0.58202
